@@ -16,7 +16,7 @@ TEST_SRCF := $(filter-out $(TEST_REF_SRCF), $(TEST_ALL_SRCF))
 
 INC := -I $(INCD)
 
-CFLAGS := -Wall -Werror -Wno-unused-variable -Wno-unused-function -MMD
+CFLAGS := -Wall -Werror -Wno-unused-variable -Wno-unused-function -MMD -fcommon
 COLORF := -DCOLOR
 DFLAGS := -g -DDEBUG -DCOLOR
 PRINT_STAMENTS := -DERROR -DSUCCESS -DWARN -DINFO
