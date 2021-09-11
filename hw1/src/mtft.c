@@ -115,7 +115,7 @@ debug("PRE CURRENT OFFSET:%lu",current_offset);
          *           If we came from left, add right_count
          *           If we came from right, add 0
          *              AKA: keep address of current, go to parent and compare with left/right child
-
+test commit pt2
     typedef struct mtf_node {
         struct mtf_node *left_child;   // Pointer to left child node
         struct mtf_node *right_child;  // Pointer to right child node
