@@ -20,23 +20,38 @@ static int strEquals(char *str1, char *str2) { //Compare two strings and returns
 } //Found some ways to (maybe) make the code more efficient(and harder to read but comments I guess)
 
 
-//DELETE AND FIX
-static SYMBOL getSymbol() { //Return the number of bytes that a symbol represents
-    if(global_options & 1){ //The arguments must be valid and 0x1(01) would not match with 0x2(10)
-        return getchar(); //Read one character and return it
-    } else { //If the flag wasn't 1, then it must be 2 since there are only 2 valid arguments
-        //return getchar()<<8 | getchar(); //Is cool but doesn't allow for checking each individual byte
-        SYMBOL byte1 = getchar(); //Read the first byte
-        if(byte1==-1) //We don't want to return if the byte is valid
-            return byte1; // If the first character is -1, then we want to return -1
-        SYMBOL byte2 = getchar(); //Read the second byte
-        if(byte2==-1) //This should return an error since we have an odd number of input bytes
-            return -1;
-    } //Does not treat -1/end of file any differently than normal bytes
-    return -1;
-} //NOTE THS SHOUKLD BE DELELTED AND REDONE IN MTFENCODE
-//while i have me here, initalize the values of last_offset to be NO_OFFSET
+static MTF_NODE* getNodePointer(){ //Returns a node we can freely
+    if(recycled_node_list){ //See if there exist any recycled nodes(NULL=false)
+        MTF_NODE *topDeck = recycled_node_list; //Pull the pointer to the top node off the top
+        MTF_NODE *nextNode = topDeck->left_child; //Get the next node(We choose left child by convention)
+        recycled_node_list = nextNode; //We want to keep the top of recycled nodes usable(NULL=no more)
 
+        /*
+        MTF_NODE topDeck = *(recycled_node_list); //Pull the top node off the "deck" :)
+        MTF_NODE nextNode = *(topDeck.left_child); //Get the next node(We choose left child by convention)
+        recycled_node_list = &(nextNode); //We want to keep the top of recycled nodes usable(NULL=no more)
+
+
+        //not fully tested!!
+        */
+
+        return topDeck; //We have finished removing the top node from the recycling list
+    } //Since there are no recycled nodes, we want to return one from the node_pool
+    return &(*(node_pool+first_unused_node_index++)); //Allocate the node at the current index
+}
+
+static MTF_NODE* descendTree(OFFSET offset){ //Given an offset, navigate to it on our tree
+    //depth is how many bits it sh ould be total
+    //offset is the 0/1 combo
+    //we want to go left on 0
+    //we want to go right on 1
+    //if we encounter a node that points to NULL on our path, we use getNodePointer to set it
+        //when this happens, we want to set the current node to point to getNoderPointer as child
+        //the child shoudl point to the current node as the parent
+        //idk how to deal with left/right_count rn and symbol is only at the bottom so idc
+    //reutrn once we do depths navigations and get the pointer to that bottom node
+    return NULL; //WIP
+}
 
 
 /**
@@ -70,9 +85,14 @@ CODE mtf_map_encode(SYMBOL sym) {
 debug("PRE SYMBOL:%c/%u",sym,sym);
 debug("PRE LAST OFFSET:%li",*(last_offset+sym));
 debug("PRE CURRENT OFFSET:%lu",current_offset);
-//when current_offset = power_of_2 then power_of_two multiply by 2 and depth++
-    //creat new parent node
-
+    if(current_offset == powerOfTwo){ //When current_offset reaches a power of two, the tree is full
+        powerOfTwo*=2; //We double powerOfTwo so we know when we need to increase the tree size
+        depth++; //The tree has one more layer of children to deal with
+        MTF_NODE *parent = getNodePointer(); //Get a pointer to be the new parent node
+        mtf_map->parent = parent; //Set the parent of the current head to be the parent
+        parent->left_child = mtf_map; //Link the parent to the current head as the left_child
+        mtf_map = parent; //Set the parent as the new head of the tree
+    } //We have successfully create more space to fit the current node
     CODE rank; //I think CODE is the proper typedef for rank but honestly as long as it's int, it's good
     if(*(last_offset+sym)==NO_OFFSET){ //We have not seen this symbol yet so we have to add an offset
         if(global_options & 1){ //The arguments must be valid and 0x1(01) would not match with 0x2(10)
@@ -82,20 +102,20 @@ debug("PRE CURRENT OFFSET:%lu",current_offset);
         } //We have gotten the rank of the symbol
     } else{ //We found the offset for the last time we used the symbol
 
+        debug("hey man we're repeating and thats not cool");
 
-        /* *(last_offset+sym) = offset for symbol
-         *descend the tree to reach the leaf node with 0-left/1-right from MSB->LSB
+        /*| *(last_offset+sym) = offset for symbol
+         // use decsentree m ethod to get to botom node
          *now we want to determine rank
          *  ascend the tree by going to parent node
-         *  delete any nodes that become leaf
+         *  delete any nodes that become leaf(send them to the shadow realm of recylcing)
          *  Also remember to keep the values of the tree consistent
          *  Use right_count to determine rank
          *      On the parent node, check left/right child
          *           If we came from left, add right_count
          *           If we came from right, add 0
          *              AKA: keep address of current, go to parent and compare with left/right child
-         *HOW TO BUILD TREE ACCORDING TO TINY BRAIN - idk lol
-
+small coder 4 fun
     typedef struct mtf_node {
         struct mtf_node *left_child;   // Pointer to left child node
         struct mtf_node *right_child;  // Pointer to right child node
@@ -109,20 +129,16 @@ debug("PRE CURRENT OFFSET:%lu",current_offset);
 
 
     } //We got the rank of the symbol and removed the node it was last seen at
+    if(depth == 0){ //Base case of building the tree; will only occur once
+        mtf_map->symbol = sym; //We only need to assign the symbol for the base case
+    } else{ //Now, we can assume that the tree has a proper parent node so we can navigate with 0/1
+        debug("add the node to the tree");
+
+        //bottom nde = descentdtree(curentopffset)
+        //botkm nde->sybm = sym;
 
 
-    //start work here
-    //create an if/else for if tree exists
-        //if(depth == 0) //aka if tree is just chillig with itself
-            //set the node symbol to first bit
-        //otherwise, we can do the 0/1 trock
-
-    /*Descend the tree using our 0/1 trick
-     *   If we find any nodes that point to null, we want to initialize the node
-     *       Find a node from recycling (or the main pool if none exist)
-     *   On the final node(aka the leaf), set the symbol to be sym
-     *   Also remember to keep the values of the tree consistent
-     */
+    }
     *(last_offset+sym) = current_offset; //The place our symbol can be found is at the current_offset
     current_offset++; //Move onto the next offset so we can insert more symbols
 
@@ -134,7 +150,7 @@ debug("POST CURRENT OFFSET:%lu",current_offset);
 
 
     return rank; //Returns the rank of the symbol sym
-} //return NO_SYMBOL; //default return seems to bewrong to me though
+} //           /!??!               //return NO_SYMBOL; //default return seems to bewrong to me though
 
 /**
  * @brief Given an integer code, return the symbol currently having that code.
@@ -210,22 +226,24 @@ int mtf_encode() {
         *(last_offset+i)=NO_OFFSET; //Get the value at each index and set it to a default NO_OFFSET
     }
     first_unused_node_index = current_offset = depth = 0; //Just paranoid, I guess
+    recycled_node_list = NULL; //I know it said it would be NULL but idk man just paranoid
     powerOfTwo = 1; //when current_offset reaches 1(and every subsequent powOf2), we will increase the depth
+    mtf_map = getNodePointer(); //Allocate the map with a node;
 
     //initialize a node for MTF_NODE *mtf_map, so first symbol(0 offset) doesn't increase depth
         //next is offset 1(pow2) which will make depth 1(parent with 1 depth child)
         //next if offset 2(pow2) which will make depth 2(paren with 2 depth childd)
         //next if offset 4(pow2) will make deph 3(offset3 is not pow2 so 2deph good (0,1,2,3))
-            //pull from MTF_NODE node_pool[MAX_NODES]
-                //"probably &node_pool[0]"
-                //akak &(*(node_pool+0))
-
-    //MTF_NODE *recycled_node_list  dont' need intializing
 
 
+/*
+if(global_options & 1){ //The arguments must be valid and 0x1(01) would not match with 0x2(10)
+        return getchar(); //Read one character and return it
+    }
 
+*/
     mtf_map_encode(getchar());
-debug("\n\n\n");
+debug("\nNEWLINE BRO\nNEWLINE BRO");
     mtf_map_encode(getchar());
 
     return -1;
@@ -288,7 +306,7 @@ int mtf_decode() {
 
 int validargs(int argc, char **argv) {
     int global_options_save = global_options; //Save the value of global_options if it's not 0x0(piazza)
-    global_options <<= 3; //If there isn't garbage, then it's just a some lines of code/allocated memory
+    global_options <<= 3; //Realizes that global_options is auto storage so it will always be 0, but it works
     global_options = (unsigned)global_options>>3; //Cast it to be unsigned so we get logical shift right
     if(argc==1){ //We want to make sure that there is a flag provided
         return -1; //The only argument passed was the filename
