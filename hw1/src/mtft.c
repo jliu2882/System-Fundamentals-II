@@ -19,12 +19,20 @@ static int strEquals(char *str1, char *str2) { //Compare two strings and returns
     return (*str2)=='\0'; //If str2 is longer/did not reach the end, it must not be the same string
 } //Found some ways to (maybe) make the code more efficient(and harder to read but comments I guess)
 
+static int getPowerOfTwo(int num){ //Gets two to the power of num
+    int power = 1; //Assuming the lowest number passed to it will be a 0
+    for(int i = 0; i < num; i++){ //We want to multiply for the power
+        power*=2; //double the product until we reach the power of 2
+    }
+    return power; //Returns after successive multiplication
+}
 
 static MTF_NODE* getNodePointer(){ //Returns a node we can freely
     if(recycled_node_list){ //See if there exist any recycled nodes(NULL=false)
         MTF_NODE *topDeck = recycled_node_list; //Pull the pointer to the top node off the top
         MTF_NODE *nextNode = topDeck->left_child; //Get the next node(We choose left child by convention)
         recycled_node_list = nextNode; //We want to keep the top of recycled nodes usable(NULL=no more)
+        //when recylcling nextnode parent shouild be null
 
         /*
         MTF_NODE topDeck = *(recycled_node_list); //Pull the top node off the "deck" :)
@@ -40,18 +48,34 @@ static MTF_NODE* getNodePointer(){ //Returns a node we can freely
     return &(*(node_pool+first_unused_node_index++)); //Allocate the node at the current index
 }
 
+//recyle node function
+static void recycleNode(MTF_NODE *recyclee){ //Recycled node at recyclee
+    //clear the stuiff abotu the node from child to coutn to parent to symbol everything'
+    //take out node and set the left_chidl tot eh current eha d of recycled_node_list
+    //for child, we dont;' care since its ncie
+}
+
 static MTF_NODE* descendTree(OFFSET offset){ //Given an offset, navigate to it on our tree
-    //depth is how many bits it sh ould be total
-    //offset is the 0/1 combo
-    //we want to go left on 0
-    //we want to go right on 1
-    //if we encounter a node that points to NULL on our path, we use getNodePointer to set it
+    MTF_NODE *leafNode = mtf_map; //Start at the head of the tree and descend the tree
+    for(int i = depth-1; i >= 0; i--){ //We want to account for leading zeroes in current_offset
+        debug("DIRECTION FOR STEP %d IS %d",depth-i,(int)(offset/getPowerOfTwo(i)));
+        int magcinubmer = (int)(offset/getPowerOfTwo(i));
+        magcinubmer++;
+        //magic number && 1
+            //on even(0) go leftie
+            //on odd(1) go rgithie
+                //if(magicn number & 1) //aka if the last bit is a 1. we go inside if
+                    //rgihieti gehtied trackie
+                //else lfetie
+         //if we encounter a node that points to NULL on our path, we use getNodePointer to set it
         //when this happens, we want to set the current node to point to getNoderPointer as child
         //the child shoudl point to the current node as the parent
-        //idk how to deal with left/right_count rn and symbol is only at the bottom so idc
-    //reutrn once we do depths navigations and get the pointer to that bottom node
-    return NULL; //WIP
+         //reutrn once we do depths navigations and get the pointer to that bottom node
+    }
+    return leafNode; //Return the leaf node after desceding the tree
 }
+
+//ascend tree functiojn
 
 
 /**
@@ -86,7 +110,7 @@ debug("PRE SYMBOL:%c/%u",sym,sym);
 debug("PRE LAST OFFSET:%li",*(last_offset+sym));
 debug("PRE CURRENT OFFSET:%lu",current_offset);
     if(current_offset == powerOfTwo){ //When current_offset reaches a power of two, the tree is full
-        powerOfTwo*=2; //We double powerOfTwo so we know when we need to increase the tree size
+        powerOfTwo*=2; //Simpler than calculating everytime to check when the tree is full
         depth++; //The tree has one more layer of children to deal with
         MTF_NODE *parent = getNodePointer(); //Get a pointer to be the new parent node
         mtf_map->parent = parent; //Set the parent of the current head to be the parent
@@ -133,7 +157,7 @@ test commit pt2
         mtf_map->symbol = sym; //We only need to assign the symbol for the base case
     } else{ //Now, we can assume that the tree has a proper parent node so we can navigate with 0/1
         debug("add the node to the tree");
-
+        mtf_map = descendTree(current_offset);
         //bottom nde = descentdtree(curentopffset)
         //botkm nde->sybm = sym;
 
