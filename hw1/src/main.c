@@ -17,9 +17,7 @@
 #endif
 
 /*
-@some kinda of oh:
-ask if strEQuals(argv, "-h") is ok or is ther garabage
-maybe how to bild tree
+check the tree values ajnd do soethint to fix left/right coutn
 
 Run through every function one by one for test cases and run program for test cases
 There should be no additional prints to console or anything other than needed(USAGE)
