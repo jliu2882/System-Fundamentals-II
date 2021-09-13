@@ -8,18 +8,22 @@
 #include "mtft.h"
 #include "debug.h"
 
-//here fordebugg brain
+//here  brain
 static void printNode(MTF_NODE *node){
-    debug("\nnode=%p,childL=%p,childR=%p,parent=%p,countL=%d,countR=%d,sym=%d\n"
-        ,node, node->left_child, node->right_child, node->parent, node->left_count, node->right_count, node->symbol);
+    debug("\nnode=%p,childL=%p,childR=%p,parent=%p,countL=%d,countR=%d,sym=%d/%x"
+        ,node, node->left_child, node->right_child, node->parent,
+         node->left_count, node->right_count, node->symbol, node->symbol);
 }
-//ebnd debug brian
+//ebnd brian
 
 
 
 
 static int depth; //Keep track of the depth of the tree which is also how many bits the offset should be
 static int powerOfTwo; //I chose this rather than a lg/ceil approach since I'm declaring a variable for depth
+static int fibNum; //Keep track of the current bits we encoded, we will reset after every 8 bits
+static int fibLen; //Keep track of the length of the Fibonacci encoding
+
 static int strEquals(char *str1, char *str2) { //Compare two strings and returns true if they were equal
     for(; (*str1)!='\0'; str1++,str2++){ //Iterate through str1 until we reach the null/end
         if((*str1)!=*(str2)){ //Compare the current characters in both string
@@ -134,6 +138,10 @@ static CODE ascendTree(MTF_NODE *leafNode) { //Deletes the leaf, as well as any 
     return rank; //Return the accumulated rank
 }
 
+static void fibonacciCode(CODE num){ //Given a number, we want to encode it and if it adds to 8 bits, we print it
+
+}
+
 
 /**
  * @brief  Given a symbol value, determine its encoding (i.e. its current rank).
@@ -162,7 +170,6 @@ static CODE ascendTree(MTF_NODE *leafNode) { //Deletes the leaf, as well as any 
  * @modifies  The state of the "move-to-front" data structures.
  */
 CODE mtf_map_encode(SYMBOL sym) {
-debug("PRE:SYMBOL %c/%u | LAST/CURRENT OFFSET %li/%li",sym,sym,*(last_offset+sym),current_offset);
     if(current_offset == powerOfTwo){ //When current_offset reaches a power of two, the tree is full
         powerOfTwo*=2; //Simpler than calculating everytime to check when the tree is full
         depth++; //The tree has one more layer of children to deal with
@@ -194,7 +201,6 @@ debug("PRE:SYMBOL %c/%u | LAST/CURRENT OFFSET %li/%li",sym,sym,*(last_offset+sym
     } //We will now have added the node in all cases
     *(last_offset+sym) = current_offset; //The place our symbol can be found is at the current_offset
     current_offset++; //Move onto the next offset so we can insert more symbols
-debug("POST:SYMBOL %c/%u | LAST/CURRENT OFFSET %li/%li | RANK %u",sym,sym,*(last_offset+sym),current_offset,rank);
     return rank; //Returns the rank of the symbol sym
 }
 
@@ -224,6 +230,7 @@ debug("POST:SYMBOL %c/%u | LAST/CURRENT OFFSET %li/%li | RANK %u",sym,sym,*(last
  */
 SYMBOL mtf_map_decode(CODE code) {
     // TO BE IMPLEMENTED.
+    //cehck input
     return NO_SYMBOL;
 }
 
@@ -274,29 +281,33 @@ int mtf_encode() {
     first_unused_node_index = current_offset = depth = 0; //Just paranoid, I guess
     recycled_node_list = NULL; //I know it said it would be NULL but idk man just paranoid
     powerOfTwo = 1; //when current_offset reaches 1(and every subsequent powOf2), we will increase the depth
-    mtf_map = getNodePointer(); //Allocate the map with a node;
+    mtf_map = getNodePointer(); //Allocate the map with a node
+    if(global_options & 1){ //The arguments must be valid and 0x1(01) would not match with 0x2(10)
+        SYMBOL input = getchar(); //Read one character at a time
+        while(input!=-1){ //Read until we get the EOF notification
+            CODE code = mtf_map_encode(input); //Encode the input and store the rank
+            input = getchar(); //Move to the next character to read
+            fibonacciCode(code+1); //Encode the rank+1 to ensure positive numbers
 
-/*
-also use  awhile loop to get hem all
-if(global_options & 1){ //The arguments must be valid and 0x1(01) would not match with 0x2(10)
-        return getchar(); //Read one character and return it
-    }
+            // we have fibNum and fibLen
+            // if fiblen>8
+            //      we do a trick where we print out the 8 an morve fiblen
 
-*/
-    mtf_map_encode(getchar());//b
-debug("\nNEWLINE BRO %p",mtf_map);
-    mtf_map_encode(getchar());//a
-debug("\nNEWLINE BRO %p",mtf_map);
-    mtf_map_encode(getchar());//n
-debug("\nNEWLINE BRO %p",mtf_map);
-    mtf_map_encode(getchar());//a
-debug("\nNEWLINE BRO %p",mtf_map);
-    mtf_map_encode(getchar());//n
-debug("\nNEWLINE BRO %p",mtf_map);
-    mtf_map_encode(getchar());//a
-debug("\nNEWLINE BRO %p",mtf_map);
-    mtf_map_encode(getchar());//newline
-    return -1;
+        } //We read the symbol and it was the EOF(-1) so we don't need to read more
+    } else{ //This means that our global flag must have wanted to read two bytes at a time
+        SYMBOL input1 = getchar();
+        SYMBOL input2 = getchar();
+        while(input1!=-1 && input2!=-1){ //If any of the inputs return EOF, we want to stop encoding
+            CODE code = mtf_map_encode(input1<<8 | input2);
+            input1 = getchar();
+            input2 = getchar();
+            //fibo encode
+        }
+        if(input1!=-1 && input2==-1){ //If the first input was not EOF, but the second was, we have odd bytes
+            return -1; //We don't want to deal with an odd number, so we return an error
+        } //We don't care that if the first input was EOF, because we just wanted to stop reading then
+    } //We finished reading the characters from stdin
+    return 0; //We went through the program successfully without any error
 }
 
 /**

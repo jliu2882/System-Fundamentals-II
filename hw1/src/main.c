@@ -17,10 +17,8 @@
 #endif
 
 /*
-check the tree values ajnd do soethint to fix left/right coutn
-
-Run through every function one by one for test cases and run program for test cases
 There should be no additional prints to console or anything other than needed(USAGE)
+
 */
 int main(int argc, char **argv)
 {
@@ -31,7 +29,11 @@ int main(int argc, char **argv)
         USAGE(*argv, EXIT_SUCCESS); //Since this is intended, we will return with exit success
     } //Any garbage values for the first 3 flag bits will have not been reset since args are valid
     if(global_options & ENCODE_OPTION){ //If the encode option flag is enabled, we want to run the function
-        mtf_encode();
+        if(mtf_encode()){
+            debug("error");
+        } else{
+            debug("funny stinky");
+        }
 
 
 
