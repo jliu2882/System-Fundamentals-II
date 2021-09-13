@@ -21,8 +21,8 @@ static void printNode(MTF_NODE *node){
 
 static int depth; //Keep track of the depth of the tree which is also how many bits the offset should be
 static int powerOfTwo; //I chose this rather than a lg/ceil approach since I'm declaring a variable for depth
-static int fibNum; //Keep track of the current bits we encoded, we will reset after every 8 bits
-static int fibLen; //Keep track of the length of the Fibonacci encoding
+static long long int fibNum; //Keep track of the current bits we encoded; overkill but we should store fibNum
+static int fibLen; //Keep track of the length of the Fibonacci encoding to ensure we stay under 8 bits
 
 static int strEquals(char *str1, char *str2) { //Compare two strings and returns true if they were equal
     for(; (*str1)!='\0'; str1++,str2++){ //Iterate through str1 until we reach the null/end
@@ -139,7 +139,16 @@ static CODE ascendTree(MTF_NODE *leafNode) { //Deletes the leaf, as well as any 
 }
 
 static void fibonacciCode(CODE num){ //Given a number, we want to encode it and if it adds to 8 bits, we print it
+    //greedy heuristic
+    //look for largest fib number less than equal to num
+    //go until we get the num
+    //append the ednign 1
 
+
+    //alternatively
+    //start with 1
+    //append the bits from rgiht to left
+    //the 1 in the 10s place is the largest fib number idk
 }
 
 
@@ -277,9 +286,9 @@ SYMBOL mtf_map_decode(CODE code) {
 int mtf_encode() {
     for(int i=0; i<SYMBOL_MAX; i++){ //We want to loop through for every value in last_offset
         *(last_offset+i)=NO_OFFSET; //Get the value at each index and set it to a default NO_OFFSET
-    }
-    first_unused_node_index = current_offset = depth = 0; //Just paranoid, I guess
-    recycled_node_list = NULL; //I know it said it would be NULL but idk man just paranoid
+    } //last_offset is initialized
+    fibLen = fibNum = first_unused_node_index = current_offset = depth = 0; //Just paranoid, I guess
+    recycled_node_list = NULL; //I know it said it would be NULL but I hope this paranoia pays off
     powerOfTwo = 1; //when current_offset reaches 1(and every subsequent powOf2), we will increase the depth
     mtf_map = getNodePointer(); //Allocate the map with a node
     if(global_options & 1){ //The arguments must be valid and 0x1(01) would not match with 0x2(10)
@@ -288,11 +297,13 @@ int mtf_encode() {
             CODE code = mtf_map_encode(input); //Encode the input and store the rank
             input = getchar(); //Move to the next character to read
             fibonacciCode(code+1); //Encode the rank+1 to ensure positive numbers
+            while(fibLen >= 8){ //Print out the characters 8 bits at a time
+                //do some bitwise math to putchar the 8
 
-            // we have fibNum and fibLen
-            // if fiblen>8
-            //      we do a trick where we print out the 8 an morve fiblen
 
+
+                fibLen-=8; //We read 8 bytes so the number is 8 bits less
+            } //Separated the function to increase modularity or something
         } //We read the symbol and it was the EOF(-1) so we don't need to read more
     } else{ //This means that our global flag must have wanted to read two bytes at a time
         SYMBOL input1 = getchar();
@@ -302,11 +313,19 @@ int mtf_encode() {
             input1 = getchar();
             input2 = getchar();
             //fibo encode
-        }
+
+
+        } //We finished reading from stdin
         if(input1!=-1 && input2==-1){ //If the first input was not EOF, but the second was, we have odd bytes
-            return -1; //We don't want to deal with an odd number, so we return an error
+            return -1; //We don't want to deal with an odd number, so we return an error after outputting n-1 bytes
         } //We don't care that if the first input was EOF, because we just wanted to stop reading then
     } //We finished reading the characters from stdin
+
+
+
+//pad lsb bits of fibNum wiht 0 if we don't have enough after encoding everything
+//aka if fiblen=/=mutiple of 8
+
     return 0; //We went through the program successfully without any error
 }
 

@@ -18,7 +18,7 @@
 
 /*
 There should be no additional prints to console or anything other than needed(USAGE)
-
+can call exit() anywhere
 */
 int main(int argc, char **argv)
 {
