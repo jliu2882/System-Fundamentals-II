@@ -48,6 +48,11 @@ static MTF_NODE* getNodePointer(){ //Returns a node from the linked list-esque s
 }
 
 static void recycleNode(MTF_NODE *recyclee){ //Recycle a node at address recyclee
+    if(recyclee->parent->left_child == recyclee){ //Our node was the left child of the parent
+        recyclee->parent->left_child = 0; //Delete our node from the parent node
+    } else{ //It was the right child
+        recyclee->parent->right_child = 0; //Delete our node from the parent node
+    } //I won't do this for the children, since we only delete if there are no children
     recyclee->left_child = recycled_node_list; //Use left_child as a self-imposed convention
     recyclee->right_child = 0; //Clear the other fields before re-using
     recyclee->parent = 0; //Clear the other fields before re-using
@@ -78,8 +83,20 @@ static MTF_NODE* descendTree(OFFSET offset){ //Given an offset, navigate to it o
     return leafNode; //Return the leaf node after desceding the tree
 }
 
-//ascend tree functiojn(pass pointer to leaf)
-    //just go up bro
+static CODE ascendTree(MTF_NODE *leafNode) { //Deletes the leaf, as well as any leafs created by this process
+    CODE rank = 0;
+    while(!leafNode->parent) { //We want to keep going until we reach mtf_map, whose parent is NULL
+        MTF_NODE *parent = leafNode->parent; //Save the parent of the current leaf node
+        if(parent->left_child == leafNode){ //See if our current node is the left_child
+            rank+=leafNode->right_count; //If it was, we want to add all the nodes on the right
+        } //If our node was the right_child, we WERE the right_count, so we would add 0(no change)
+        if(leafNode->left_child || leafNode->right_child){ //If the node has children, the OR will pick it up
+            recycleNode(leafNode); //Delete the child-less leaf node by tossing it into recycle
+        } //If the node wasn't a leaf, we should keep ascending without deletion
+        leafNode = parent; //Set the leaf to the previous leaf's parent
+    }
+    return rank;
+}
 
 
 /**
@@ -128,23 +145,7 @@ debug("PRE:SYMBOL %c/%u | LAST/CURRENT OFFSET %li/%li",sym,sym,*(last_offset+sym
         } //We have gotten the rank of the symbol
     } else{ //We found the offset for the last time we used the symbol
         MTF_NODE *leafNode = descendTree(*(last_offset+sym)); //Descend the tree to where sym was last seen
-        leafNode++;//garbage
-            //scened tree counting the ranks and stuff
-
-        //repeat offnde
-        /*  now we want to determine rank
-         *  ascend the tree by going to parent node
-         *  delete any nodes that become leaf(send them to the shadow realm of recylcing)
-         *  Also remember to keep the values of the tree consistent
-         *  Use right_count to determine rank
-         *      On the parent node, check left/right child
-         *           If we came from left, add right_count
-         *           If we came from right, add 0
-         *              AKA: keep address of current, go to parent and compare with left/right child
-
-         */
-
-
+        rank = ascendTree(leafNode); //Deletes unnecessary nodes and counts the rank while doing so
     } //We got the rank of the symbol and removed the node it was last seen at
     if(depth == 0){ //Base case of building the tree; will only occur once
         mtf_map->symbol = sym; //We only need to assign the symbol for the base case
@@ -154,9 +155,7 @@ debug("PRE:SYMBOL %c/%u | LAST/CURRENT OFFSET %li/%li",sym,sym,*(last_offset+sym
     } //We will now have added the node in all cases
     *(last_offset+sym) = current_offset; //The place our symbol can be found is at the current_offset
     current_offset++; //Move onto the next offset so we can insert more symbols
-
 debug("POST:SYMBOL %c/%u | LAST/CURRENT OFFSET %li/%li | RANK %u",sym,sym,*(last_offset+sym),current_offset,rank);
-
     return rank; //Returns the rank of the symbol sym
 }
 
@@ -238,13 +237,8 @@ int mtf_encode() {
     powerOfTwo = 1; //when current_offset reaches 1(and every subsequent powOf2), we will increase the depth
     mtf_map = getNodePointer(); //Allocate the map with a node;
 
-    //initialize a node for MTF_NODE *mtf_map, so first symbol(0 offset) doesn't increase depth
-        //next is offset 1(pow2) which will make depth 1(parent with 1 depth child)
-        //next if offset 2(pow2) which will make depth 2(paren with 2 depth childd)
-        //next if offset 4(pow2) will make deph 3(offset3 is not pow2 so 2deph good (0,1,2,3))
-
-
 /*
+also use  awhile loop to get hem all
 if(global_options & 1){ //The arguments must be valid and 0x1(01) would not match with 0x2(10)
         return getchar(); //Read one character and return it
     }
