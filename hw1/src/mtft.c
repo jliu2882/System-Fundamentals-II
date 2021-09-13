@@ -63,6 +63,8 @@ static void recycleNode(MTF_NODE *recyclee){ //Recycle a node at address recycle
 } //I am treating recycled_node_list as a linked list where we append to the head
 
 static MTF_NODE* descendTree(OFFSET offset){ //Given an offset, navigate to it on our tree
+//SET THE LEFT AND RIGH COUTNS
+//only one would go up and it would go up by 1 every time we add a thing
     MTF_NODE *leafNode = mtf_map; //Start at the head of the tree and descend the tree
     for(int i = depth-1; i >= 0; i--){ //We want to account for leading zeroes in current_offset
         int direction = ((int)(offset/getPowerOfTwo(i))&1); //Convoluted way to get the digit at bit i
@@ -84,7 +86,7 @@ static MTF_NODE* descendTree(OFFSET offset){ //Given an offset, navigate to it o
 }
 
 static CODE ascendTree(MTF_NODE *leafNode) { //Deletes the leaf, as well as any leafs created by this process
-    CODE rank = 0;
+    CODE rank = 0; //Start a count for the rank
     while(!leafNode->parent) { //We want to keep going until we reach mtf_map, whose parent is NULL
         MTF_NODE *parent = leafNode->parent; //Save the parent of the current leaf node
         if(parent->left_child == leafNode){ //See if our current node is the left_child
@@ -95,7 +97,7 @@ static CODE ascendTree(MTF_NODE *leafNode) { //Deletes the leaf, as well as any 
         } //If the node wasn't a leaf, we should keep ascending without deletion
         leafNode = parent; //Set the leaf to the previous leaf's parent
     }
-    return rank;
+    return rank; //Return the accumulated rank
 }
 
 
