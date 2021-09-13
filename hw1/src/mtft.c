@@ -41,10 +41,17 @@ static MTF_NODE* getNodePointer(){ //Returns a node from the linked list-esque s
     if(recycled_node_list){ //See if there exist any recycled nodes(NULL=false=empty list)
         MTF_NODE *topDeck = recycled_node_list; //Pull the pointer to the top node off the top
         recycled_node_list = topDeck->left_child; //We want to update the list(left_child as a convention)
-        topDeck->left_child = 0; //Clear the left_child(every other data point is 0 when recycling)
+        topDeck->left_child = 0; //Clear the left_child(every other data point is set when recycling)
         return topDeck; //We have finished removing the top node from the recycling list
     } //Since there are no recycled nodes, we want to return one from the node_pool which is by default 0s
-    return &(*(node_pool+first_unused_node_index++)); //Allocate the node at the current index
+    MTF_NODE *unusedNode = &(*(node_pool+first_unused_node_index++)); //Allocate the node at the current index
+    unusedNode->left_child = 0; //just some paranoia, but setting the symbol is important
+    unusedNode->right_child = 0; //just some paranoia, but setting the symbol is important
+    unusedNode->parent = 0; //just some paranoia, but setting the symbol is important
+    unusedNode->left_count = 0; //just some paranoia, but setting the symbol is important
+    unusedNode->right_count = 0; //just some paranoia, but setting the symbol is important
+    unusedNode->symbol = NO_SYMBOL; //just some paranoia, but setting the symbol is important
+    return unusedNode; //Return the node once we set the default values
 }
 
 static void recycleNode(MTF_NODE *recyclee){ //Recycle a node at address recyclee
@@ -58,13 +65,37 @@ static void recycleNode(MTF_NODE *recyclee){ //Recycle a node at address recycle
     recyclee->parent = 0; //Clear the other fields before re-using
     recyclee->left_count = 0; //Clear the other fields before re-using
     recyclee->right_count = 0; //Clear the other fields before re-using
-    recyclee->symbol = 0; //Clear the other fields before re-using(maybe I could have just done recyclee=0)
+    recyclee->symbol = NO_SYMBOL; //Clear the other fields before re-using(in this case; clearing is -1)
     recycled_node_list = recyclee; //Set the recyclee as the head of the list
 } //I am treating recycled_node_list as a linked list where we append to the head
 
-static MTF_NODE* descendTree(OFFSET offset){ //Given an offset, navigate to it on our tree
+static MTF_NODE* descendTreeWithCount(OFFSET offset){ //Given an offset, navigate to it on our tree
 //SET THE LEFT AND RIGH COUTNS
 //only one would go up and it would go up by 1 every time we add a thing
+    MTF_NODE *leafNode = mtf_map; //Start at the head of the tree and descend the tree
+    for(int i = depth-1; i >= 0; i--){ //We want to account for leading zeroes in current_offset
+        int direction = ((int)(offset/getPowerOfTwo(i))&1); //Convoluted way to get the digit at bit i
+        if(direction){ //If direction is non-zero, it must be 1 and therefore we go right
+            if(!leafNode->right_child){ //If there is no right child, we want to fix that
+                leafNode->right_child = getNodePointer(); //Set the child to a node
+                leafNode->right_child->parent = leafNode; //Set the parent of the new node to the old
+            } //The right child has been created
+            leafNode->right_count++; //We are inserting a node on the right path
+            leafNode = leafNode->right_child; //Go to the right child
+            //we are adding a tree down this path on the rgith side so right count up
+        } else{ //Otherwise, we go left
+            if(!leafNode->left_child){ //If there is no left child, we want to fix that
+                leafNode->left_child = getNodePointer(); //Set the child to a node
+                leafNode->left_child->parent = leafNode; //Set the parent of the new node to the old
+            } //The left child has been created
+            leafNode->left_count++; //We are inserting a node on the left path
+            leafNode = leafNode->left_child; //Go to the left child
+        } //We have descended one level in the tree, even if there was NULL
+    } //We have descended to the leaf node
+    return leafNode; //Return the leaf node after desceding the tree
+}
+
+static MTF_NODE* descendTree(OFFSET offset){ //Given an offset, navigate to it on our tree
     MTF_NODE *leafNode = mtf_map; //Start at the head of the tree and descend the tree
     for(int i = depth-1; i >= 0; i--){ //We want to account for leading zeroes in current_offset
         int direction = ((int)(offset/getPowerOfTwo(i))&1); //Convoluted way to get the digit at bit i
@@ -87,12 +118,15 @@ static MTF_NODE* descendTree(OFFSET offset){ //Given an offset, navigate to it o
 
 static CODE ascendTree(MTF_NODE *leafNode) { //Deletes the leaf, as well as any leafs created by this process
     CODE rank = 0; //Start a count for the rank
-    while(!leafNode->parent) { //We want to keep going until we reach mtf_map, whose parent is NULL
+    while(leafNode->parent) { //We want to keep going until we reach mtf_map, whose parent is NULL
         MTF_NODE *parent = leafNode->parent; //Save the parent of the current leaf node
         if(parent->left_child == leafNode){ //See if our current node is the left_child
-            rank+=leafNode->right_count; //If it was, we want to add all the nodes on the right
-        } //If our node was the right_child, we WERE the right_count, so we would add 0(no change)
-        if(leafNode->left_child || leafNode->right_child){ //If the node has children, the OR will pick it up
+            rank+=parent->right_count; //If it was, we want to add all the nodes on the right
+            parent->left_count--; //The bottom-most leafNode is deleted, so the count goes down by 1
+        } else {//If our node was the right_child, we WERE the right_count, so we would add 0(no change)
+            parent->right_count--; //However, we still want to update the count
+        } //The count for every node on the way up should be affected, but not any not on the way
+        if(!leafNode->left_child && !leafNode->right_child){ //If the node has children, the OR will pick it up
             recycleNode(leafNode); //Delete the child-less leaf node by tossing it into recycle
         } //If the node wasn't a leaf, we should keep ascending without deletion
         leafNode = parent; //Set the leaf to the previous leaf's parent
@@ -128,7 +162,6 @@ static CODE ascendTree(MTF_NODE *leafNode) { //Deletes the leaf, as well as any 
  * @modifies  The state of the "move-to-front" data structures.
  */
 CODE mtf_map_encode(SYMBOL sym) {
-    // TO BE IMPLEMENTED. useless comment but looks nicer for now :)
 debug("PRE:SYMBOL %c/%u | LAST/CURRENT OFFSET %li/%li",sym,sym,*(last_offset+sym),current_offset);
     if(current_offset == powerOfTwo){ //When current_offset reaches a power of two, the tree is full
         powerOfTwo*=2; //Simpler than calculating everytime to check when the tree is full
@@ -136,6 +169,10 @@ debug("PRE:SYMBOL %c/%u | LAST/CURRENT OFFSET %li/%li",sym,sym,*(last_offset+sym
         MTF_NODE *parent = getNodePointer(); //Get a pointer to be the new parent node
         mtf_map->parent = parent; //Set the parent of the current head to be the parent
         parent->left_child = mtf_map; //Link the parent to the current head as the left_child
+        parent->left_count = mtf_map->left_count + mtf_map->right_count; //Left_count should be the sum of counts
+        if(depth==1){ //From the base case of depth=0 and our depth++;
+            parent->left_count++; //The parent node was initially a leaf itself
+        }
         mtf_map = parent; //Set the parent as the new head of the tree
     } //We have successfully create more space to fit the current node
     CODE rank; //I think CODE is the proper typedef for rank but honestly as long as it's int, it's good
@@ -145,14 +182,14 @@ debug("PRE:SYMBOL %c/%u | LAST/CURRENT OFFSET %li/%li",sym,sym,*(last_offset+sym
         } else{ //If the flag wasn't 1, then it must be 2 since there are only 2 valid arguments
             rank = sym+65536; //To elaborate on why we add, the first 65536 are for "seen before rank"
         } //We have gotten the rank of the symbol
-    } else{ //We found the offset for the last time we used the symbol
+    } else{ //We found the offset for the last time we used the symbol;
         MTF_NODE *leafNode = descendTree(*(last_offset+sym)); //Descend the tree to where sym was last seen
         rank = ascendTree(leafNode); //Deletes unnecessary nodes and counts the rank while doing so
     } //We got the rank of the symbol and removed the node it was last seen at
     if(depth == 0){ //Base case of building the tree; will only occur once
         mtf_map->symbol = sym; //We only need to assign the symbol for the base case
     } else{ //Now, we can assume that the tree has a proper parent node so we can navigate with 0/1
-        MTF_NODE *leafNode = descendTree(current_offset); //Descend the tree to the current offset
+        MTF_NODE *leafNode = descendTreeWithCount(current_offset); //Add the node to the tree and increase count
         leafNode->symbol = sym; //Set the symbol equal to the current symbol
     } //We will now have added the node in all cases
     *(last_offset+sym) = current_offset; //The place our symbol can be found is at the current_offset
@@ -253,16 +290,12 @@ debug("\nNEWLINE BRO %p",mtf_map);
     mtf_map_encode(getchar());//n
 debug("\nNEWLINE BRO %p",mtf_map);
     mtf_map_encode(getchar());//a
-/*
 debug("\nNEWLINE BRO %p",mtf_map);
     mtf_map_encode(getchar());//n
 debug("\nNEWLINE BRO %p",mtf_map);
     mtf_map_encode(getchar());//a
 debug("\nNEWLINE BRO %p",mtf_map);
     mtf_map_encode(getchar());//newline
-debug("\nNEWLINE BRO %p",mtf_map);
-    mtf_map_encode(getchar());//fhiaewuogheun
-*/
     return -1;
 }
 
