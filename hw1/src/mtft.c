@@ -18,11 +18,11 @@ static void printNode(MTF_NODE *node){
 
 
 
-
-static int depth; //Keep track of the depth of the tree which is also how many bits the offset should be
+static int initialized; //Keep track of if everything has been initialized or not
+static int depth; //Keep track of the depth of the tree(asked in OH if declaring static variables was ok)
 static int powerOfTwo; //I chose this rather than a lg/ceil approach since I'm declaring a variable for depth
-static long long int fibNum; //Keep track of the current bits we encoded; overkill but we should store fibNum
-static int fibLen; //Keep track of the length of the Fibonacci encoding to ensure we stay under 8 bits
+static long long int codeNum; //Keep track of the current bits encoded; overkill but we should store codeNum
+static int codeLen; //Keep track of the length of the Fibonacci encoding to ensure we stay under 8 bits
 
 static int strEquals(char *str1, char *str2) { //Compare two strings and returns true if they were equal
     for(; (*str1)!='\0'; str1++,str2++){ //Iterate through str1 until we reach the null/end
@@ -74,8 +74,6 @@ static void recycleNode(MTF_NODE *recyclee){ //Recycle a node at address recycle
 } //I am treating recycled_node_list as a linked list where we append to the head
 
 static MTF_NODE* descendTreeWithCount(OFFSET offset){ //Given an offset, navigate to it on our tree
-//SET THE LEFT AND RIGH COUTNS
-//only one would go up and it would go up by 1 every time we add a thing
     MTF_NODE *leafNode = mtf_map; //Start at the head of the tree and descend the tree
     for(int i = depth-1; i >= 0; i--){ //We want to account for leading zeroes in current_offset
         int direction = ((int)(offset/getPowerOfTwo(i))&1); //Convoluted way to get the digit at bit i
@@ -86,7 +84,6 @@ static MTF_NODE* descendTreeWithCount(OFFSET offset){ //Given an offset, navigat
             } //The right child has been created
             leafNode->right_count++; //We are inserting a node on the right path
             leafNode = leafNode->right_child; //Go to the right child
-            //we are adding a tree down this path on the rgith side so right count up
         } else{ //Otherwise, we go left
             if(!leafNode->left_child){ //If there is no left child, we want to fix that
                 leafNode->left_child = getNodePointer(); //Set the child to a node
@@ -138,17 +135,44 @@ static CODE ascendTree(MTF_NODE *leafNode) { //Deletes the leaf, as well as any 
     return rank; //Return the accumulated rank
 }
 
-static void fibonacciCode(CODE num){ //Given a number, we want to encode it and if it adds to 8 bits, we print it
-    //greedy heuristic
-    //look for largest fib number less than equal to num
-    //go until we get the num
-    //append the ednign 1
+static void fibonacciCode(CODE num){ //Given a number, we want to encode it and change codeNum/codeLen
+    //sudokode
+
+    //have a 1 for fibNUm/fibLen
+
+    // we are passed the code to encode so no +1 here
+    //have variables
+    //fib1=1
+    //fib2=1
+    //temp=??
+    //base case of fib1 being ok <<jk just do fib1=fib2=1
+    //now tldr if fib2>num; we use fib1
+        //never happens at first since min num = 1
+    //then we do temp=fib1+fib2/fib1=fib2/fi2=temp;
+    //repeat until we reach fib2>fib1
+        //now we know that fib1 is the alrgest fib that fits in num
+        //do a 1
+        //flag var we are doing a thing
+
+    //fib down
+    //fib1=the num
+    //fib2=next big
+    //temp=w.e
+    //temp=fib2/fig2=fib1/fib1=temp-fib1
+        //if we are doing a thing, no check
+        //otherwise check if we add 0/1
+            //does it fit basically
+    //add a 0 if we doing a thing
+    //we are no longer doing a tihing
+
+    //go until we reach the fib of 1 or 0 or idk
+
+    //remembmer adding bits mean iadding to fibNum and fibLen++
+    //value is just 2^fibLen*(0/1) i think
 
 
-    //alternatively
-    //start with 1
-    //append the bits from rgiht to left
-    //the 1 in the 10s place is the largest fib number idk
+
+    //add appropiate codeNum shifted by fibLen with fibNum and to incrase codelen by fibLen at the end
 }
 
 
@@ -179,6 +203,16 @@ static void fibonacciCode(CODE num){ //Given a number, we want to encode it and 
  * @modifies  The state of the "move-to-front" data structures.
  */
 CODE mtf_map_encode(SYMBOL sym) {
+    if(!initialized){ //Initialize the variables if we have not done so before
+        for(int i=0; i<SYMBOL_MAX; i++){ //We want to loop through for every value in last_offset
+            *(last_offset+i)=NO_OFFSET; //Get the value at each index and set it to a default NO_OFFSET
+        } //last_offset is initialized
+        codeLen = codeNum = first_unused_node_index = current_offset = depth = 0; //Just paranoid, I guess
+        recycled_node_list = NULL; //I know it said it would be NULL but I hope this paranoia pays off
+        powerOfTwo = 1; //when current_offset reaches 1(and every subsequent powOf2), we will increase the depth
+        mtf_map = getNodePointer(); //Allocate the map with a node
+        initialized++; //We shall never set foot here again
+    } //Let it be so
     if(current_offset == powerOfTwo){ //When current_offset reaches a power of two, the tree is full
         powerOfTwo*=2; //Simpler than calculating everytime to check when the tree is full
         depth++; //The tree has one more layer of children to deal with
@@ -188,7 +222,7 @@ CODE mtf_map_encode(SYMBOL sym) {
         parent->left_count = mtf_map->left_count + mtf_map->right_count; //Left_count should be the sum of counts
         if(depth==1){ //From the base case of depth=0 and our depth++;
             parent->left_count++; //The parent node was initially a leaf itself
-        }
+        } //Sorry for having a comment on every line and here's the apology making it worse
         mtf_map = parent; //Set the parent as the new head of the tree
     } //We have successfully create more space to fit the current node
     CODE rank; //I think CODE is the proper typedef for rank but honestly as long as it's int, it's good
@@ -284,25 +318,19 @@ SYMBOL mtf_map_decode(CODE code) {
  * @return 0 if the operation completes without error, -1 otherwise.
  */
 int mtf_encode() {
-    for(int i=0; i<SYMBOL_MAX; i++){ //We want to loop through for every value in last_offset
-        *(last_offset+i)=NO_OFFSET; //Get the value at each index and set it to a default NO_OFFSET
-    } //last_offset is initialized
-    fibLen = fibNum = first_unused_node_index = current_offset = depth = 0; //Just paranoid, I guess
-    recycled_node_list = NULL; //I know it said it would be NULL but I hope this paranoia pays off
-    powerOfTwo = 1; //when current_offset reaches 1(and every subsequent powOf2), we will increase the depth
-    mtf_map = getNodePointer(); //Allocate the map with a node
+    initialized = 0; //I know it's static but come on its one line of code man
     if(global_options & 1){ //The arguments must be valid and 0x1(01) would not match with 0x2(10)
         SYMBOL input = getchar(); //Read one character at a time
         while(input!=-1){ //Read until we get the EOF notification
             CODE code = mtf_map_encode(input); //Encode the input and store the rank
             input = getchar(); //Move to the next character to read
             fibonacciCode(code+1); //Encode the rank+1 to ensure positive numbers
-            while(fibLen >= 8){ //Print out the characters 8 bits at a time
+            while(codeLen >= 8){ //Print out the characters 8 bits at a time
                 //do some bitwise math to putchar the 8
 
 
 
-                fibLen-=8; //We read 8 bytes so the number is 8 bits less
+                codeLen-=8; //We read 8 bytes so the number is 8 bits less
             } //Separated the function to increase modularity or something
         } //We read the symbol and it was the EOF(-1) so we don't need to read more
     } else{ //This means that our global flag must have wanted to read two bytes at a time
