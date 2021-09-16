@@ -200,11 +200,11 @@ static void fibonacciCode(CODE num){ //Given a number, we want to encode it and 
 CODE mtf_map_encode(SYMBOL sym) {
     if(global_options & 1){ //Check the case of encoding 1 byte
         if(sym<0 || sym>255){ //If the number is negative or greater than 1 byte
-            exit(EXIT_FAILURE); //The input was invalid
+            exit(EXIT_FAILURE); //The input was invalid; exit because we can't differentiate return values
         } //Now, the input is valid
     } else{ //Check the case of encoding 2 bytes
         if(sym<0 || sym>65535){ //If the number is negative or greater than 2 byte
-            exit(EXIT_FAILURE); //The input was invalid
+            exit(EXIT_FAILURE); //The input was invalid; exit because we can't differentiate return values
         } //Now, the input is valid
     } //idk, this is for robustness or w.e
     if(!initialized){ //Initialize the variables if we have not done so before
@@ -276,16 +276,21 @@ CODE mtf_map_encode(SYMBOL sym) {
  * @modifies  The state of the "move-to-front" data structures.
  */
 SYMBOL mtf_map_decode(CODE code) {
+    if(global_options & 1){ //Check the case of encoding 1 byte
+        //on errors retur NO_SYMBOL
+    } else{ //Check the case of encoding 2 bytes
+        //on errors retur NO_SYMBO
+    } //idk, this is for robustness or w.e
+    if(!initialized){ //Initialize the variables if we have not done so before
+        //initilaized the variahbles
+        initialized++; //We shall never set foot here again
+    } //Let it be so
+
     // TO BE IMPLEMENTED.
-    //cehck input
+
     //mtf_map_decode has to build that tree using the ranks it is supplied.
 
-    //As far as concerns error returns from mtf_map_decode(),
-    //I think it is reasonable to return NO_SYMBOL in a case where a segmentation fault
-    //might otherwise occur, to inform the caller (i.e. mtf_decode()) and permit a graceful exit.
-    //The specification for mtf_map_decode() should probably include the explicit precondition
-    //that the caller supplies values that are in-range, so that it is free to return NO_SYMBOL
-    //in case the caller violates the precondition.
+
     return NO_SYMBOL;
 }
 
@@ -334,7 +339,7 @@ int mtf_encode() {
     codeLen = codeNum = 0; //Separate but these variables are not needed in mtf_map_encode
     if(global_options & 1){ //The arguments must be valid and 0x1(01) would not match with 0x2(10)
         SYMBOL input = getchar(); //Read one character at a time
-        while(input!=-1){ //Read until we get the EOF notification
+        while(input!=EOF){ //Read until we get the EOF notification
             CODE code = mtf_map_encode(input); //Encode the input and store the rank
             input = getchar(); //Move to the next character to read
             fibonacciCode(code+1); //Encode the rank+1 to ensure positive numbers
@@ -350,7 +355,7 @@ int mtf_encode() {
     } else{ //This means that our global flag must have wanted to read two bytes at a time
         SYMBOL input1 = getchar(); //Get the first symbol
         SYMBOL input2 = getchar(); //Get the second symbol
-        while(input1!=-1 && input2!=-1){ //If any of the inputs return EOF, we want to stop encoding
+        while(input1!=EOF && input2!=EOF){ //If any of the inputs return EOF, we want to stop encoding
             CODE code = mtf_map_encode(input1<<8 | input2); //Combine the symbols and encode t hem
             input1 = getchar(); //Renew the first symbol
             input2 = getchar(); //Renew the second symbol
@@ -360,18 +365,28 @@ int mtf_encode() {
                 mask<<=(codeLen-8); //Shift the masking bits to cover the first 8 bits
                 long long int masked = (codeNum&mask); //Mask the bits to get the top 8 bits
                 masked>>=(codeLen-8); //Shift the masked bits back as the 8 LSBs
-                putchar(masked); //Put the char out
+                if(putchar(masked)==EOF){ //Put the char out, checking if we got an error
+                    return -1; //If we did, we want to return saying we did
+                } //Otherwise, continue as normal
                 codeLen-=8; //We read 8 bytes so the number is 8 bits less
             } //Separated the function to increase modularity or something
         } //We finished reading from stdin
-        if(input1!=-1 && input2==-1){ //If the first input was not EOF, but the second was, we have odd bytes
+        if(input1!=EOF && input2==EOF){ //If the first input was not EOF, but the second was, we have odd bytes
             return -1; //We don't want to deal with an odd number, so we return an error after outputting n-1 bytes
         } //We don't care that if the first input was EOF, because we just wanted to stop reading then
     } //We finished reading the characters from stdin
-    if(codeLen>0){ //If we have bits left to read(since they are less than 8), we must pad it to print
+    if(codeLen<8 && codeLen>0){ //If we have bits left to read(double check <8), we must pad it to print
         //pad lsb bits of fibNum wiht 0 if we don't have enough after encoding everything
-
+        long long int mask = 0xff; //This is binary for 11111111, used to mask 8 bits
+        codeNum<<=(8-codeLen);
+        codeNum&=mask; //We don't care what's left in codeNum other than the last bits we padded
+        if(putchar(codeNum)==EOF){ //Put the final byte out, checking if we got an error
+            return -1; //If we did, we want to return saying we did
+        } //Otherwise, we are basically done
     } //We have no more bits to print out
+    if(fflush(stdout)==EOF){ //To be completely honest, not really sure what this does
+        return -1; //But it's part of a 'robust program' and I get the gist of putting at the end
+    } //It allows us to flush the buffer, so we can get input in order idk
     return 0; //We went through the program successfully without any error
 }
 
@@ -411,7 +426,25 @@ int mtf_encode() {
  */
 int mtf_decode() {
     // TO BE IMPLEMENTED
-    return -1;
+    initialized = 0;
+
+
+//As far as concerns error returns from mtf_map_decode(),
+//I think it is reasonable to return NO_SYMBOL in a case where a segmentation fault
+//might otherwise occur, to inform the caller (i.e. mtf_decode()) and permit a graceful exit.
+//The specification for mtf_map_decode() should probably include the explicit precondition
+//that the caller supplies values that are in-range, so that it is free to return NO_SYMBOL
+//in case the caller violates the precondition.
+    //tldr if mtf_map_encode returns NO_SYMBOL, then return -1;
+
+
+
+
+
+    if(fflush(stdout)==EOF){ //To be completely honest, not really sure what this does
+        return -1; //But it's part of a 'robust program' and I get the gist of putting at the end
+    } //It allows us to flush the buffer, so we can get input in order idk
+    return 0; //We made it through the program without crashing
 }
 
 /**
