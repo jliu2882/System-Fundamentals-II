@@ -136,43 +136,38 @@ static CODE ascendTree(MTF_NODE *leafNode) { //Deletes the leaf, as well as any 
 }
 
 static void fibonacciCode(CODE num){ //Given a number, we want to encode it and change codeNum/codeLen
-    //sudokode
-
-    //have a 1 for fibNUm/fibLen
-
-    // we are passed the code to encode so no +1 here
-    //have variables
-    //fib1=1
-    //fib2=1
-    //temp=??
-    //base case of fib1 being ok <<jk just do fib1=fib2=1
-    //now tldr if fib2>num; we use fib1
-        //never happens at first since min num = 1
-    //then we do temp=fib1+fib2/fib1=fib2/fi2=temp;
-    //repeat until we reach fib2>fib1
-        //now we know that fib1 is the alrgest fib that fits in num
-        //do a 1
-        //flag var we are doing a thing
-
-    //fib down
-    //fib1=the num
-    //fib2=next big
-    //temp=w.e
-    //temp=fib2/fig2=fib1/fib1=temp-fib1
-        //if we are doing a thing, no check
-        //otherwise check if we add 0/1
-            //does it fit basically
-    //add a 0 if we doing a thing
-    //we are no longer doing a tihing
-
-    //go until we reach the fib of 1 or 0 or idk
-
-    //remembmer adding bits mean iadding to fibNum and fibLen++
-    //value is just 2^fibLen*(0/1) i think
-
-
-
-    //add appropiate codeNum shifted by fibLen with fibNum and to incrase codelen by fibLen at the end
+    int fibNum = 1; //Start by appending the 1 to the end
+    int fibLen = 1; //Start with a length of 1(This is because fibNum is initialized)
+    int fib1 = 1; //Start by creating variables to get the fibonacci numbers
+    int fib2 = 1; //Start by creating variables to get the fibonacci numbers
+    int temp = 1; //Create a temp variable with any value
+    int flag = 1; //This will let us know if we are allowed to append a 1(1=yes,0=no)
+    while(fib2<=num){ //We go until we find a fib2 is larger than num(we will iterate until fib2 exceeds num)
+        temp = fib1 + fib2; //Add the two previous fibonacci numbers
+        fib1 = fib2; //Move the numbers up
+        fib2 = temp; //Move the numbers up
+    } //Now, fib1 is the largest fibonacci number that fits within num
+    fibNum+=1*getPowerOfTwo(fibLen); //Add a 1 at the current opening
+    fibLen++; //We want to append the next bit further up
+    flag = 0; //Fix the flag so we know not to add a 1(This catches any repeating 1s outside of the end)
+    num-=fib1; //Decrease the number so we can greedily add more fibonacci numbers
+    while(fib1>1){ //We want to go until fib1 reaches the fibonacci number 1, where it will go once to check
+        temp = fib2; //This is the latest fibonacci number
+        fib2 = fib1; //This is the one before that
+        fib1 = temp-fib2; //We can reverse the fibonacci process
+        if(flag && num>=fib1){ //We can fit a fibonacci number AND are allowed to append
+            fibNum+=1*getPowerOfTwo(fibLen); //The 1 is unneeded but emphasizes the point
+            num-=fib1; //We are greedily consuming fibonacci numbers
+            fibLen++; //Increase the length so we append further up next time
+            flag = 0; //We cannnot append again
+        } else{ //We just added a 1 for a fibonacci number
+            fibLen++; //Increase the length so we append further up next time
+            flag = 1; //We are allowed to append next time//We can still append next time
+        } //We have sucessfully checked that fibonacci number
+    } //We finished our encoding
+    codeLen+=fibLen; //Add the length of the code to the encoded length
+    codeNum<<=fibLen; //Make way for the encoded number
+    codeNum|=fibNum; //Append our encoded number to the code
 }
 
 
@@ -203,11 +198,20 @@ static void fibonacciCode(CODE num){ //Given a number, we want to encode it and 
  * @modifies  The state of the "move-to-front" data structures.
  */
 CODE mtf_map_encode(SYMBOL sym) {
+    if(global_options & 1){ //Check the case of encoding 1 byte
+        if(sym<0 || sym>255){ //If the number is negative or greater than 1 byte
+            exit(EXIT_FAILURE); //The input was invalid
+        } //Now, the input is valid
+    } else{ //Check the case of encoding 2 bytes
+        if(sym<0 || sym>65535){ //If the number is negative or greater than 2 byte
+            exit(EXIT_FAILURE); //The input was invalid
+        } //Now, the input is valid
+    } //idk, this is for robustness or w.e
     if(!initialized){ //Initialize the variables if we have not done so before
         for(int i=0; i<SYMBOL_MAX; i++){ //We want to loop through for every value in last_offset
             *(last_offset+i)=NO_OFFSET; //Get the value at each index and set it to a default NO_OFFSET
         } //last_offset is initialized
-        codeLen = codeNum = first_unused_node_index = current_offset = depth = 0; //Just paranoid, I guess
+        first_unused_node_index = current_offset = depth = 0; //Just paranoid, I guess
         recycled_node_list = NULL; //I know it said it would be NULL but I hope this paranoia pays off
         powerOfTwo = 1; //when current_offset reaches 1(and every subsequent powOf2), we will increase the depth
         mtf_map = getNodePointer(); //Allocate the map with a node
@@ -274,6 +278,14 @@ CODE mtf_map_encode(SYMBOL sym) {
 SYMBOL mtf_map_decode(CODE code) {
     // TO BE IMPLEMENTED.
     //cehck input
+    //mtf_map_decode has to build that tree using the ranks it is supplied.
+
+    //As far as concerns error returns from mtf_map_decode(),
+    //I think it is reasonable to return NO_SYMBOL in a case where a segmentation fault
+    //might otherwise occur, to inform the caller (i.e. mtf_decode()) and permit a graceful exit.
+    //The specification for mtf_map_decode() should probably include the explicit precondition
+    //that the caller supplies values that are in-range, so that it is free to return NO_SYMBOL
+    //in case the caller violates the precondition.
     return NO_SYMBOL;
 }
 
@@ -319,6 +331,7 @@ SYMBOL mtf_map_decode(CODE code) {
  */
 int mtf_encode() {
     initialized = 0; //I know it's static but come on its one line of code man
+    codeLen = codeNum = 0; //Separate but these variables are not needed in mtf_map_encode
     if(global_options & 1){ //The arguments must be valid and 0x1(01) would not match with 0x2(10)
         SYMBOL input = getchar(); //Read one character at a time
         while(input!=-1){ //Read until we get the EOF notification
@@ -326,34 +339,39 @@ int mtf_encode() {
             input = getchar(); //Move to the next character to read
             fibonacciCode(code+1); //Encode the rank+1 to ensure positive numbers
             while(codeLen >= 8){ //Print out the characters 8 bits at a time
-                //do some bitwise math to putchar the 8
-
-
-
+                long long int mask = 0xff; //This is binary for 11111111, used to mask 8 bits
+                mask<<=(codeLen-8); //Shift the masking bits to cover the first 8 bits
+                long long int masked = (codeNum&mask); //Mask the bits to get the top 8 bits
+                masked>>=(codeLen-8); //Shift the masked bits back as the 8 LSBs
+                putchar(masked); //Put the char out
                 codeLen-=8; //We read 8 bytes so the number is 8 bits less
             } //Separated the function to increase modularity or something
         } //We read the symbol and it was the EOF(-1) so we don't need to read more
     } else{ //This means that our global flag must have wanted to read two bytes at a time
-        SYMBOL input1 = getchar();
-        SYMBOL input2 = getchar();
+        SYMBOL input1 = getchar(); //Get the first symbol
+        SYMBOL input2 = getchar(); //Get the second symbol
         while(input1!=-1 && input2!=-1){ //If any of the inputs return EOF, we want to stop encoding
-            CODE code = mtf_map_encode(input1<<8 | input2);
-            input1 = getchar();
-            input2 = getchar();
-            //fibo encode
-
-
+            CODE code = mtf_map_encode(input1<<8 | input2); //Combine the symbols and encode t hem
+            input1 = getchar(); //Renew the first symbol
+            input2 = getchar(); //Renew the second symbol
+            fibonacciCode(code+1); //Encode the rank+1 to ensure positive numbers
+            while(codeLen >= 8){ //Print out the characters 8 bits at a time
+                long long int mask = 0xff; //This is binary for 11111111, used to mask 8 bits
+                mask<<=(codeLen-8); //Shift the masking bits to cover the first 8 bits
+                long long int masked = (codeNum&mask); //Mask the bits to get the top 8 bits
+                masked>>=(codeLen-8); //Shift the masked bits back as the 8 LSBs
+                putchar(masked); //Put the char out
+                codeLen-=8; //We read 8 bytes so the number is 8 bits less
+            } //Separated the function to increase modularity or something
         } //We finished reading from stdin
         if(input1!=-1 && input2==-1){ //If the first input was not EOF, but the second was, we have odd bytes
             return -1; //We don't want to deal with an odd number, so we return an error after outputting n-1 bytes
         } //We don't care that if the first input was EOF, because we just wanted to stop reading then
     } //We finished reading the characters from stdin
+    if(codeLen>0){ //If we have bits left to read(since they are less than 8), we must pad it to print
+        //pad lsb bits of fibNum wiht 0 if we don't have enough after encoding everything
 
-
-
-//pad lsb bits of fibNum wiht 0 if we don't have enough after encoding everything
-//aka if fiblen=/=mutiple of 8
-
+    } //We have no more bits to print out
     return 0; //We went through the program successfully without any error
 }
 
