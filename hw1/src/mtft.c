@@ -8,34 +8,6 @@
 #include "mtft.h"
 #include "debug.h"
 
-//debugging tools, too lazy to change debug, so I just did printf to show
-static void printNode(MTF_NODE *node){
-    printf("\nnode=%p,childL=%p,childR=%p,parent=%p,countL=%d,countR=%d,sym=%d/%x"
-        ,node, node->left_child, node->right_child, node->parent,
-         node->left_count, node->right_count, node->symbol, node->symbol);
-}
-static int count = 10;
-static void printTreeHelper(MTF_NODE *node, int space){
-    if(!node)
-        return;
-    space += count;
-    printf("\n");
-    printTreeHelper(node->right_child, space);
-    for(int i = count; i < space; i++){
-        printf(" ");
-    }
-    printNode(node);
-    printTreeHelper(node->left_child, space);
-}
-
-static void printTree(MTF_NODE *node){
-    printNode(mtf_map);
-    printTreeHelper(mtf_map,0);
-}
-//will be deleted anyway so hm
-
-
-
 static int initialized; //Keep track of if everything has been initialized or not
 static int depth; //Keep track of the depth of the tree(asked in OH if declaring static variables was ok)
 static int powerOfTwo; //I chose this rather than a lg/ceil approach since I'm declaring a variable for depth
