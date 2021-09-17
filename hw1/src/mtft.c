@@ -8,13 +8,31 @@
 #include "mtft.h"
 #include "debug.h"
 
-//here  brain
+//debugging tools, too lazy to change debug, so I just did printf to show
 static void printNode(MTF_NODE *node){
-    debug("\nnode=%p,childL=%p,childR=%p,parent=%p,countL=%d,countR=%d,sym=%d/%x"
+    printf("\nnode=%p,childL=%p,childR=%p,parent=%p,countL=%d,countR=%d,sym=%d/%x"
         ,node, node->left_child, node->right_child, node->parent,
          node->left_count, node->right_count, node->symbol, node->symbol);
 }
-//ebnd brian
+static int count = 10;
+static void printTreeHelper(MTF_NODE *node, int space){
+    if(!node)
+        return;
+    space += count;
+    printf("\n");
+    printTreeHelper(node->right_child, space);
+    for(int i = count; i < space; i++){
+        printf(" ");
+    }
+    printNode(node);
+    printTreeHelper(node->left_child, space);
+}
+
+static void printTree(MTF_NODE *node){
+    printNode(mtf_map);
+    printTreeHelper(mtf_map,0);
+}
+//will be deleted anyway so hm
 
 
 
@@ -22,7 +40,8 @@ static int initialized; //Keep track of if everything has been initialized or no
 static int depth; //Keep track of the depth of the tree(asked in OH if declaring static variables was ok)
 static int powerOfTwo; //I chose this rather than a lg/ceil approach since I'm declaring a variable for depth
 static long long int codeNum; //Keep track of the current bits encoded; overkill but we should store codeNum
-static int codeLen; //Keep track of the length of the Fibonacci encoding to ensure we stay under 8 bits
+static int codeLen; //Length of the Fibonacci encoding to ensure we stay under 8 bits(Any bits past this, we ignore)
+static int maxRank; //Keep track of the greatest rank allowable for mtf_map_decode
 
 static int strEquals(char *str1, char *str2) { //Compare two strings and returns true if they were equal
     for(; (*str1)!='\0'; str1++,str2++){ //Iterate through str1 until we reach the null/end
@@ -50,11 +69,11 @@ static MTF_NODE* getNodePointer(){ //Returns a node from the linked list-esque s
     } //Since there are no recycled nodes, we want to return one from the node_pool which is by default 0s
     MTF_NODE *unusedNode = &(*(node_pool+first_unused_node_index++)); //Allocate the node at the current index
     unusedNode->left_child = 0; //just some paranoia, but setting the symbol is important
-    unusedNode->right_child = 0; //just some paranoia, but setting the symbol is important
-    unusedNode->parent = 0; //just some paranoia, but setting the symbol is important
-    unusedNode->left_count = 0; //just some paranoia, but setting the symbol is important
-    unusedNode->right_count = 0; //just some paranoia, but setting the symbol is important
-    unusedNode->symbol = NO_SYMBOL; //just some paranoia, but setting the symbol is important
+    unusedNode->right_child = 0; //just some paranoia, but this allows us to reset first_unused_index
+    unusedNode->parent = 0; //just some paranoia, but this allows for multiple calls to mtf_map_encode/decode
+    unusedNode->left_count = 0; //just some paranoia, but we won't run out of nodes since each node is new
+    unusedNode->right_count = 0; //just some paranoia, but yea im paranoid
+    unusedNode->symbol = NO_SYMBOL; //just some paranoia
     return unusedNode; //Return the node once we set the default values
 }
 
@@ -73,7 +92,28 @@ static void recycleNode(MTF_NODE *recyclee){ //Recycle a node at address recycle
     recycled_node_list = recyclee; //Set the recyclee as the head of the list
 } //I am treating recycled_node_list as a linked list where we append to the head
 
-static MTF_NODE* descendTreeWithCount(OFFSET offset){ //Given an offset, navigate to it on our tree
+static MTF_NODE* descendTree(OFFSET offset){ //Given an offset, navigate to it on our tree
+    MTF_NODE *leafNode = mtf_map; //Start at the head of the tree and descend the tree
+    for(int i = depth-1; i >= 0; i--){ //We want to account for leading zeroes in current_offset
+        int direction = ((int)(offset/getPowerOfTwo(i))&1); //Convoluted way to get the digit at bit i of offset
+        if(direction){ //If direction is non-zero, it must be 1 and therefore we go right
+            if(!leafNode->right_child){ //If there is no right child, we want to fix that
+                leafNode->right_child = getNodePointer(); //Set the child to a node
+                leafNode->right_child->parent = leafNode; //Set the parent of the new node to the old
+            } //The right child has been created
+            leafNode = leafNode->right_child; //Go to the right child
+        } else{ //Otherwise, we go left
+            if(!leafNode->left_child){ //If there is no left child, we want to fix that
+                leafNode->left_child = getNodePointer(); //Set the child to a node
+                leafNode->left_child->parent = leafNode; //Set the parent of the new node to the old
+            } //The left child has been created
+            leafNode = leafNode->left_child; //Go to the left child
+        } //We have descended one level in the tree, even if there was NULL
+    } //We have descended to the leaf node
+    return leafNode; //Return the leaf node after desceding the tree
+}
+
+static MTF_NODE* descendTreeAndAdd(OFFSET offset){ //Given an offset, navigate to it on our tree to add
     MTF_NODE *leafNode = mtf_map; //Start at the head of the tree and descend the tree
     for(int i = depth-1; i >= 0; i--){ //We want to account for leading zeroes in current_offset
         int direction = ((int)(offset/getPowerOfTwo(i))&1); //Convoluted way to get the digit at bit i
@@ -96,28 +136,22 @@ static MTF_NODE* descendTreeWithCount(OFFSET offset){ //Given an offset, navigat
     return leafNode; //Return the leaf node after desceding the tree
 }
 
-static MTF_NODE* descendTree(OFFSET offset){ //Given an offset, navigate to it on our tree
-    MTF_NODE *leafNode = mtf_map; //Start at the head of the tree and descend the tree
-    for(int i = depth-1; i >= 0; i--){ //We want to account for leading zeroes in current_offset
-        int direction = ((int)(offset/getPowerOfTwo(i))&1); //Convoluted way to get the digit at bit i
-        if(direction){ //If direction is non-zero, it must be 1 and therefore we go right
-            if(!leafNode->right_child){ //If there is no right child, we want to fix that
-                leafNode->right_child = getNodePointer(); //Set the child to a node
-                leafNode->right_child->parent = leafNode; //Set the parent of the new node to the old
-            } //The right child has been created
-            leafNode = leafNode->right_child; //Go to the right child
-        } else{ //Otherwise, we go left
-            if(!leafNode->left_child){ //If there is no left child, we want to fix that
-                leafNode->left_child = getNodePointer(); //Set the child to a node
-                leafNode->left_child->parent = leafNode; //Set the parent of the new node to the old
-            } //The left child has been created
-            leafNode = leafNode->left_child; //Go to the left child
-        } //We have descended one level in the tree, even if there was NULL
-    } //We have descended to the leaf node
-    return leafNode; //Return the leaf node after desceding the tree
+static MTF_NODE* descendTreeWithRank(CODE rank){ //Given a proper rank, descend to the node with that rank
+    MTF_NODE *currentNode = mtf_map; //Start at the top node
+    int level = depth; //We want to go down the tree depth amount of times
+    while(level>0){ //We want to traverse until we reach the bottom level
+        if((currentNode->right_count-rank)>0){ //If the rank can be found on the right side
+            currentNode=currentNode->right_child;
+        } else{ //Otherwise, it must be on the left side
+            rank-=currentNode->right_count; //We subtract the count from the right side to keep an accurate count
+            currentNode=currentNode->left_child;
+        } //We moved down one level
+        level--; //What that comment said
+    } //Note that if we are descending with the rank, it must exist in the tree already(and therefore not need to create)
+    return currentNode; //We have reached the node with rank 'rank'
 }
 
-static CODE ascendTree(MTF_NODE *leafNode) { //Deletes the leaf, as well as any leafs created by this process
+static CODE ascendTreeAndDelete(MTF_NODE *leafNode) { //Deletes the leaf and any childless nodes
     CODE rank = 0; //Start a count for the rank
     while(leafNode->parent) { //We want to keep going until we reach mtf_map, whose parent is NULL
         MTF_NODE *parent = leafNode->parent; //Save the parent of the current leaf node
@@ -170,6 +204,21 @@ static void fibonacciCode(CODE num){ //Given a number, we want to encode it and 
     codeNum|=fibNum; //Append our encoded number to the code
 }
 
+static CODE fibonacciDecode(long long int fibCode, int fibLen){ //Given a zeckendorf encoding, return the encoded value
+    CODE sum = 0; //We want to accumulate the number from the code
+    int fib1 = 1; //We want to encode the fibonacci numbers
+    int fib2 = 1; //We will use fib2 as the number
+    int temp = 1; //Temp variable with any value but
+    fibLen--; //2^0 is the (1)nes place, so we want to correct for that
+    while(fibLen>0){ //We want to add up the ith fibonacci number for all the digits in fibCode
+        sum+=fib2*((int)(fibCode/getPowerOfTwo(fibLen))&1); //Add the number, if there is a 1 present
+        fibLen--; //Decrease the length until we reach 0
+        temp=fib1; //Save fib1
+        fib1=fib2; //Replace fib1 with fib2
+        fib2=fib1+temp; //Add fib1 and fib2 in fib2
+    } //We completed the encoding
+    return sum; //Return the sum
+}
 
 /**
  * @brief  Given a symbol value, determine its encoding (i.e. its current rank).
@@ -213,7 +262,7 @@ CODE mtf_map_encode(SYMBOL sym) {
         } //last_offset is initialized
         first_unused_node_index = current_offset = depth = 0; //Just paranoid, I guess
         recycled_node_list = NULL; //I know it said it would be NULL but I hope this paranoia pays off
-        powerOfTwo = 1; //when current_offset reaches 1(and every subsequent powOf2), we will increase the depth
+        powerOfTwo = 1; //When current_offset reaches 1(and every subsequent powOf2), we will increase the depth
         mtf_map = getNodePointer(); //Allocate the map with a node
         initialized++; //We shall never set foot here again
     } //Let it be so
@@ -238,12 +287,12 @@ CODE mtf_map_encode(SYMBOL sym) {
         } //We have gotten the rank of the symbol
     } else{ //We found the offset for the last time we used the symbol;
         MTF_NODE *leafNode = descendTree(*(last_offset+sym)); //Descend the tree to where sym was last seen
-        rank = ascendTree(leafNode); //Deletes unnecessary nodes and counts the rank while doing so
+        rank = ascendTreeAndDelete(leafNode); //Deletes unnecessary nodes and counts the rank while doing so
     } //We got the rank of the symbol and removed the node it was last seen at
     if(depth == 0){ //Base case of building the tree; will only occur once
         mtf_map->symbol = sym; //We only need to assign the symbol for the base case
     } else{ //Now, we can assume that the tree has a proper parent node so we can navigate with 0/1
-        MTF_NODE *leafNode = descendTreeWithCount(current_offset); //Add the node to the tree and increase count
+        MTF_NODE *leafNode = descendTreeAndAdd(current_offset); //Add the node to the tree and increase count
         leafNode->symbol = sym; //Set the symbol equal to the current symbol
     } //We will now have added the node in all cases
     *(last_offset+sym) = current_offset; //The place our symbol can be found is at the current_offset
@@ -277,21 +326,80 @@ CODE mtf_map_encode(SYMBOL sym) {
  */
 SYMBOL mtf_map_decode(CODE code) {
     if(global_options & 1){ //Check the case of encoding 1 byte
-        //on errors retur NO_SYMBOL
+        if(code<0 || code>511){ //Check if the code is out of bounds
+            return NO_SYMBOL; //It was, so we want to return -1;
+        } //We cleared the errors
     } else{ //Check the case of encoding 2 bytes
-        //on errors retur NO_SYMBO
+        if(code<0 || code>131071){ //Check if the code is out of bounds
+            return NO_SYMBOL; //It was, so we want to return -1;
+        } //We cleared the errors
     } //idk, this is for robustness or w.e
     if(!initialized){ //Initialize the variables if we have not done so before
-        //initilaized the variahbles
+        if(global_options & 1){ //Check the case of encoding 1 byte
+            if(code<=255){ //Check if the code is in the lower half
+                return NO_SYMBOL; //We should not have seen any symbol yet(since it's the FIRST code)
+            } //This is enough to check for the base case of uninitialized
+        } else{ //Check the case of encoding 2 bytes
+            if(code<=65535){ //Check if the code is in the lower half
+                return NO_SYMBOL; //We should not have seen any symbol yet(since it's the FIRST code)
+            } //This is enough to check for the base case of uninitialized
+        } //We now verified the first code is valid
+        first_unused_node_index = current_offset = depth = 0; //Just paranoid, I guess
+        recycled_node_list = NULL; //I know it said it would be NULL but I hope this paranoia pays off
+        powerOfTwo = 1; //When current_offset reaches 1(and every subsequent powOf2), we will increase the depth
+        maxRank = 0; //Set the max allowable rank to be 0 since we have the 0
+        mtf_map = getNodePointer(); //Allocate the map with a node
         initialized++; //We shall never set foot here again
-    } //Let it be so
-
-    // TO BE IMPLEMENTED.
-
-    //mtf_map_decode has to build that tree using the ranks it is supplied.
-
-
-    return NO_SYMBOL;
+    } //A lot of this code is similar to mtf_map_encode because we are rebuilding the tree
+    if(global_options & 1){ //Check the case of encoding 1 byte
+        if(code>maxRank && code<256){ //Check if the code is in the lower half and greater than maxRank
+            return NO_SYMBOL; //The code is trying to access ranks that are not possible with our given tree
+        } //This won't guarentee our decode makes sense, but it will weed out impossible encodes
+    } else{ //Check the case of encoding 2 bytes
+        if(code>maxRank && code<65536){ //Check if the code is in the lower half and greater than maxRank
+            return NO_SYMBOL; //The code is trying to access ranks that are not possible with our given tree
+        } //This won't guarentee our decode makes sense, but it will weed out impossible encodes
+    } //We now verified the code is both in bounds, and not invalid
+    if(current_offset == powerOfTwo){ //When current_offset reaches a power of two, the tree is full
+        powerOfTwo*=2; //Simpler than calculating everytime to check when the tree is full
+        depth++; //The tree has one more layer of children to deal with
+        MTF_NODE *parent = getNodePointer(); //Get a pointer to be the new parent node
+        mtf_map->parent = parent; //Set the parent of the current head to be the parent
+        parent->left_child = mtf_map; //Link the parent to the current head as the left_child
+        parent->left_count = mtf_map->left_count + mtf_map->right_count; //Left_count should be the sum of counts
+        if(depth==1){ //From the base case of depth=0 and our depth++;
+            parent->left_count++; //The parent node was initially a leaf itself
+        } //Sorry for having a comment on every line and here's the apology making it worse
+        mtf_map = parent; //Set the parent as the new head of the tree
+    } //We have successfully create more space to fit the current node
+    SYMBOL sym; //We want to return the proper symbol at the end
+    if(global_options & 1){ //Check the case of encoding 1 byte
+        if(code>255){ //Check if the code is in the upper half(never seen before)
+            sym = code-256; //We want to adjust so it gets the corect symbol
+            maxRank++; //We encountered a new symbol, so the maximum rank is increased
+        } else{ //It must be in the lower half, so we are replacing an old symbol
+            MTF_NODE *leafNode = descendTreeWithRank(code); //Descend the tree with the current rank
+            sym = leafNode->symbol; //Get the symbol at the leaf node
+            ascendTreeAndDelete(leafNode); //We don't need to store the rank now
+        } //We have checked the code
+    } else{ //Check the case of encoding 2 bytes
+        if(code>65535){ //Check if the code is in the upper half(never seen before)
+            sym = code-65536; //We want to adjust so it gets the corect symbol
+            maxRank++; //We encountered a new symbol, so the maximum rank is increased
+        } else{ //It must be in the lower half, so we are replacing an old symbol
+            MTF_NODE *leafNode = descendTreeWithRank(code); //Descend the tree with the current rank
+            sym = leafNode->symbol; //Get the symbol at the leaf node
+            ascendTreeAndDelete(leafNode); //We don't need to store the rank now
+        } //We have checked the code
+    } //We obtained the symbol, now we want to build the tree, so it stays consistent for future calls
+    if(depth == 0){ //Base case of building the tree; will only occur once
+        mtf_map->symbol = sym; //We only need to assign the symbol for the base case
+    } else{ //Now, we can assume that the tree has a proper parent node so we can navigate with 0/1
+        MTF_NODE *leafNode = descendTreeAndAdd(current_offset); //Add the node to the tree and increase count
+        leafNode->symbol = sym; //Set the symbol equal to the current symbol
+    } //We will now have added the node in all cases
+    current_offset++; //Move onto the next offset so we can rebuild the tree
+    return sym; //We sucessfully made it through the program with no errors
 }
 
 /**
@@ -348,7 +456,9 @@ int mtf_encode() {
                 mask<<=(codeLen-8); //Shift the masking bits to cover the first 8 bits
                 long long int masked = (codeNum&mask); //Mask the bits to get the top 8 bits
                 masked>>=(codeLen-8); //Shift the masked bits back as the 8 LSBs
-                putchar(masked); //Put the char out
+                if(putchar(masked)==EOF){ //Put the char out, checking if we got an error
+                    return -1; //If we did, we want to return saying we did
+                } //Otherwise, continue as normal
                 codeLen-=8; //We read 8 bytes so the number is 8 bits less
             } //Separated the function to increase modularity or something
         } //We read the symbol and it was the EOF(-1) so we don't need to read more
@@ -425,22 +535,82 @@ int mtf_encode() {
  * @return 0 if the operation completes without error, -1 otherwise.
  */
 int mtf_decode() {
-    // TO BE IMPLEMENTED
-    initialized = 0;
+    initialized = 0; //Declare that we are uninitialized(I know it's static)
+    codeLen = codeNum = 0; //Separate but these variables are not needed in mtf_map_encode
+    int byte = getchar(); //Read the first byte of the encoding(1/2 bytes only change how the mtf_map_decode process)
+    while (byte != EOF){ //Read until we read the EOF
+        int nextByte = getchar(); //We want to get a taste of the next byte
+        if(nextByte==EOF){ //If our current byte is the last one, we want to remove padding zeros
+            int newLen = 8; //Start at 8 and decrease until we reach a 1
+            while(!((int)(byte/getPowerOfTwo(0))&1)){ //Remove the padding zero
+                byte>>=1; //Move one bit the LSB of the byte is a 1
+                newLen--; //This section will not run if there were no padding 0
+            } //There are potential bad input with padding 1, but I assume it may also be valid input so
+            codeNum<<=newLen; //Move the current codeNum by the length bits to make room for our input
+            codeLen+=newLen; //The length of our number is increased by newLen bits
+            codeNum|=byte; //Append our input into the codeNum
+        } else{ //The general case assumes we are reading all 8 bits
+            codeNum<<=8; //Move the current codeNum by 8 bits to make room for our input
+            codeLen+=8; //The length of our number is increased by 8 bits
+            codeNum|=byte; //Append our input into the codeNum
+        } //This is hopefully the last comment because honestly same
+        int searchRepeat = 1; //We want to read until we read without finding repeating 1s(allows cases like 011011)
+        int flag = 0; //We have not read a 1 yet(We will find repeating 1s this way)
+        while(searchRepeat){ //We go until we iterate without finding a repeated digit
+            searchRepeat = 0; //Assume this is the last time, unless proven otherwise
+            int bits = 8; //We want to read the latest 8 bits
+            if(codeLen<8){ //However, if we don't have 8 bits to read
+                bits = codeLen; //We'll just read the latest bits
+            } //This catches some edge cases, I hope
+            for(int i = bits; i >= 0; i--){ //We want to read the latest bits for repeating 0s(Previous 11s are removed)
+                int digit = ((int)(codeNum/getPowerOfTwo(i))&1); //Get the digit of codeNum at bit i(Won't affect codeNum)
+                if(digit){ //The digit was a 1
+                    if(flag){ //We previously read a 1
+                        flag = 0; //Set the flag to 0 for later use
+                        searchRepeat = 1; //We confirmed that we should loop again since we found a repeat
+                        long long int codeDupe = codeNum; //Duplicate codeNum for manipulation
+                        codeDupe>>=i; //We want to erase the following bits after our repeating 1
+                        int dupeLen = codeLen-i; //The first couple of bits are part of the new number(don't go over)
+                        codeLen=i; //We have i bits remaining after the repeating 1s
 
+unsigned mask;
+mask = (1 << i) - 1;
+codeNum = codeNum & mask;
 
-//As far as concerns error returns from mtf_map_decode(),
-//I think it is reasonable to return NO_SYMBOL in a case where a segmentation fault
-//might otherwise occur, to inform the caller (i.e. mtf_decode()) and permit a graceful exit.
-//The specification for mtf_map_decode() should probably include the explicit precondition
-//that the caller supplies values that are in-range, so that it is free to return NO_SYMBOL
-//in case the caller violates the precondition.
-    //tldr if mtf_map_encode returns NO_SYMBOL, then return -1;
-
-
-
-
-
+                        CODE result = fibonacciDecode(codeDupe,dupeLen); //Decode the zeckendorf encoding
+                        result--; //Subtract 1 to account for the 1 we added for encoding(to ensure positive numbers
+                        SYMBOL sym = mtf_map_decode(result);
+                        if(sym==NO_SYMBOL){ //If we got an error message
+                            return -1; //We want to let the main program know that the input broke somewhere
+                        } //We finished decoding this byte
+                        if(global_options & 1){ //Check the case for 1 byte
+                            if(putchar(sym)==EOF){ //Put the char out, checking if we got an error
+                                return -1; //If we did, we want to return saying we did
+                            } //Otherwise, continue as normal
+                        } else{ //Check the case for 2 bytes
+                            SYMBOL sym1 = ((0xff<<8)&sym)>>8; //We want to get the first 8 bits
+                            SYMBOL sym2 = 0xff&sym; //We want to get the last 8 bits
+                            if(putchar(sym1)==EOF){ //Put the char out, checking if we got an error
+                                return -1; //If we did, we want to return saying we did
+                            } //Otherwise, continue as normal
+                            if(putchar(sym2)==EOF){ //Put the char out, checking if we got an error
+                                return -1; //If we did, we want to return saying we did
+                            } //Otherwise, continue as normal
+                        } //We have finished printing after we decoded the signal
+                    } else{ //Otherwise, trigger the flag
+                        flag = 1; //Next time, if we read a 1, flag will be triggered
+                    } //Dealt with the 1
+                } else{ //We read a 0
+                    flag = 0; //The last bit we read wasn't a 1
+                } //Dealt with the 0
+            } //Read the bits, and dealt with any 11s that occurred
+            searchRepeat = 0; //We confirmed that we shouldn't loop again since we didn't find a repeat
+        } //We've finished searching for repeating 1's
+        byte=nextByte; //Set the byte equal to the next byte
+    } //We have finished reading the file, since we read every byte(since writing 4 bits would count as 4 leading 0 bit)
+    if(codeLen>0){ //There is a case of no ending 11, which implies that the file was not proper input
+        return -1; //This is invalid input (somehow messed up the input)
+    } //We have dealt with a possible error
     if(fflush(stdout)==EOF){ //To be completely honest, not really sure what this does
         return -1; //But it's part of a 'robust program' and I get the gist of putting at the end
     } //It allows us to flush the buffer, so we can get input in order idk

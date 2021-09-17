@@ -29,32 +29,16 @@ int main(int argc, char **argv)
         USAGE(*argv, EXIT_SUCCESS); //Since this is intended, we will return with exit success
     } //Any garbage values for the first 3 flag bits will have not been reset since args are valid
     if(global_options & ENCODE_OPTION){ //If the encode option flag is enabled, we want to run the function
-        if(mtf_encode()){
-            debug("error");
-        } else{
-            debug("funny stinky");
-        }
-
-
-
-    /*
-    If the -e flag is provided, then the program will read uncompressed data from
-    standard input (stdin) and emit compressed data to standard output (stdout)
-        tldr run encode function in if statement
-        if we get a -1(TRUE), we do a goofy looking exit(exit-failure)
-        if we get a 0(false), we do a goofy exit successs kinda guy
-    */
+        if(mtf_encode()){ //If the program ran into any error
+            return EXIT_FAILURE; //We want to let the program know we failed
+        } //Otherwise, we succesfully ran mtf_encode
     } //Any garbage values for the first 3 flag bits will have not been reset since args are valid
     if(global_options & DECODE_OPTION){ //If the decode option flag is enabled, we want to run the function
-        debug("AHHHHHHHH DECODE ME\n");
-    /*
-    If the -d flag is provided, then the program will read compressed data from
-    standard input (stdin) and emit uncompressed data to standard output (stdout).
-    */
+        if(mtf_decode()){ //If the program ran into any error
+            return EXIT_FAILURE; //We want to let the program know we failed
+        } //Otherwise, we succesfully ran mtf_encode
     } //Any garbage values for the first 3 flag bits will have not been reset since args are valid
-
-    // TO BE IMPLEMENTED
-    return EXIT_FAILURE; //This implies that the encode/decode functions ran into an error
+    return EXIT_SUCCESS; //This implies that we ran our program without running into an error
 }
 
 /*
