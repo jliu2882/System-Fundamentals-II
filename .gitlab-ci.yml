@@ -1,8 +1,8 @@
 image: hwrunner:latest
 variables:
     GIT_SSL_NO_VERIFY: "true"
-    EXEC: mtft
-    HW_DIR: hw1
+    EXEC: browse
+    HW_DIR: hw2
     CPU_LIMIT: 60
     FILE_LIMIT: 1000000
 before_script:
@@ -23,5 +23,6 @@ run:
 test:
     stage: test
     script:
-        - ulimit -t ${CPU_LIMIT} -f ${FILE_LIMIT}
+        - ulimit -t ${CPU_LIMIT}
+	- ulimit -f ${FILE_LIMIT}
         - cd ${HW_DIR} && bin/${EXEC}_tests -S --verbose=0 --timeout 30
