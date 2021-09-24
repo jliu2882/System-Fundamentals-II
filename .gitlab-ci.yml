@@ -19,7 +19,7 @@ run:
     stage: run
     script:
         - ulimit -t ${CPU_LIMIT} -f ${FILE_LIMIT}
-        - cd ${HW_DIR} && bin/${EXEC} -h
+        - cd ${HW_DIR} && bin/${EXEC}
 test:
     stage: test
     script:
