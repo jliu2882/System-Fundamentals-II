@@ -49,5 +49,6 @@ void view_file(NODE *node)
     next = first->next;  /* Save because delete_node frees its arg */
     delete_node(first);
   }
+  next = next;//temp fix lmao
   free(first);
 }

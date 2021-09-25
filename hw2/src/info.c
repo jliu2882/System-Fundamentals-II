@@ -24,27 +24,27 @@ static char *cvt_mode(mode_t mode);
 
 NODE *get_info(char *path)
 {
-  FILE_INFO *info;
-  NODE *node;
+  FILE_INFO *info; //Declares a variable to store file info
+  NODE *node; //Declares a node to store our information
 
-  if((info = malloc(sizeof(FILE_INFO))) == NULL
-     || (node = malloc(sizeof(NODE))) == NULL) {
-    feep("Out of memory");
-    return(NULL);
+  if((info = malloc(sizeof(FILE_INFO))) == NULL //Allocate space for info
+     || (node = malloc(sizeof(NODE))) == NULL) { //Allocate space for node
+    feep("Out of memory"); //Lets the user know we ran out of space
+    return(NULL); //Return an error if we ran out of space
   }
-  info->parent = NULL;
-  node->info = info;
-  node->info->level = 0;
-  node->next = node->prev = NULL;
-  strcpy(info->path, path);
-  if(stat(path, &info->stat) < 0) {
-    feep("Can't stat file");
-    free(info);
-    free(node);
-    return(NULL);
+  info->parent = NULL; //There is no parent directory
+  node->info = info; //Sets the information about the file to be info
+  node->info->level = 0; //The subdirectories want 0 as indenting
+  node->next = node->prev = NULL; //There are no next/previous nodes currently
+  strcpy(info->path, path); //Copy our path into the information
+  if(stat(path, &info->stat) < 0) { //Obtain information about our path and put it under info stat
+    feep("Can't stat file"); //If we ran into any error, we want to let the user know
+    free(info); //Free the space we allocated for the info
+    free(node); //Free the space we allocated for the node
+    return(NULL); //Return an error if we couldn't get anything about our path
   }
-  cvt_info(info, node->data);
-  return(node);
+  cvt_info(info, node->data); //Store the data from info into our node
+  return(node); //Returns the node with the information
 }
 
 /*
@@ -53,26 +53,27 @@ NODE *get_info(char *path)
 
 static void cvt_info(FILE_INFO *info, char *buf)
 {
-  char *n;
-  struct passwd *pw;
+  char *n; //Declare a string n
+  struct passwd *pw; //Declare a password struct(pre-defined somewhere so dw)
 
-  if(strcmp(info->path, "/")
-     && (n = rindex(info->path, '/')) != NULL)
-      n++;
-  else
-      n = info->path;
-  pw = getpwuid(info->stat.st_uid);
-  sprintf(buf, "%.10s %3d %-8.8s %8qd %.12s %s",
-	  cvt_mode(info->stat.st_mode),
-	  info->stat.st_nlink,
-	  pw != NULL ? pw->pw_name : "",
-	  info->stat.st_size,
-	  ctime(&info->stat.st_mtime)+4,
-	  n);
+  if(strcmp(info->path, "/") //If our path is not "/"
+     && (n = rindex(info->path, '/')) != NULL) //AND there is an occurence of "/"
+      n++; //Move n to start at the next character(Skip initial "/")
+  else //This is the case of no "/" or just "/"
+      n = info->path; //n would just be our path
+  pw = getpwuid(info->stat.st_uid); //Searches the database(?) for a matching uid and returns a password
+  sprintf(buf, "%.10s %3ld %-8.8s %li %.12s %s", //Write all this into buf
+	  cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+	  info->stat.st_nlink, //The number of hard links
+	  pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+	  info->stat.st_size, //The total size in bytes
+	  ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+	  n); //As well as our path
 }
 
 /*
  * Convert mode bits to printable representation, a la "ls -l"
+ * i hope there is no bugs in here lmao this looks spooky ??
  */
 
 static char *cvt_mode(mode_t mode)
@@ -135,11 +136,11 @@ static char *cvt_mode(mode_t mode)
 
 NODE *insert_node(NODE *old, NODE *new)
 {
-  new->prev = old;
-  new->next = old->next;
-  old->next = new;
-  if(new->next != NULL) new->next->prev = new;
-  return(new);
+  new->prev = old; //the new nodes past node is the old one
+  new->next = old->next; //we want to insert not replace
+  old->next = new; //the old nodes new node is the new node
+  if(new->next != NULL) new->next->prev = new; //if the next node wasn't null, we want to set its prev to the new
+  return(new); //return the new node
 }
 
 /*
@@ -148,11 +149,12 @@ NODE *insert_node(NODE *old, NODE *new)
 
 void delete_node(NODE *node)
 {
-  NODE *next = node->next;
+  NODE *next = node->next; //create a node for the next node that we will delete
 
-  if(next == NULL) return;
-  node->next = next->next;
-  if(node->next != NULL) node->next->prev = node;
-  if(next->info != NULL) free(next->info);
-  free(next);
+  if(next == NULL) return; //if it was null, then we don't need to delete the next node
+  node->next = next->next; //jump over the next node
+  if(node->next != NULL) node->next->prev = node; //if the new next is valid, fix the previous node
+  if(next->info != NULL) free(next->info); //if the deleted node had info, we want to free it
+  free(next); //free the node
+  //potential bug, don't free data
 }

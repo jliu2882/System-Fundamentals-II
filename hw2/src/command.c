@@ -2,7 +2,6 @@
 /*
  * Process keyboard input and dispatch commands
  */
-
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -27,49 +26,48 @@ static void open_directory(NODE *dir);
 
 int command(int vmode)
 {
-  int c;
-
-  switch(c = getch()) {
-  case 'n':
+  int c; //creates a int c
+  switch(c = getch()) { //gets an input and reads what the user is looking for
+  case 'n': //n:  Move the cursor to the next line (if any).
     next_line();
     break;
-  case 'N':
+  case 'N': //N:  Move the cursor to the next screen (if any).
     next_screen();
     break;
-  case 'p':
+  case 'p': //p:  Move the cursor to the previous line (if any).
     previous_line();
     break;
-  case 'P':
+  case 'P': //P:  Move the cursor to the previous screen (if any).
     previous_screen();
     break;
-  case 'q':
-    if(!vmode) return(1);
-    else feep("");
+  case 'q': //q:  Quit the program.
+    if(!vmode) return(1); //if we are in normal mode return success
+    else feep(""); //if we are in view mode, return error
     break;
-  case 'o':
+  case 'o': //o:  Open the directory at the current line and display an indented list of its contents.
     if(!vmode) open_directory(cursor_node);
     else feep("");
     break;
-  case 'c':
+  case 'c': //c:  Close the directory at the current line, removing the indented list of its contents.
     if(!vmode) close_directory(cursor_node);
     else feep("");
     break;
-  case 'v':
+  case 'v': //v:  Open the file at the current line and enter "view mode".
     if(!vmode) view_file(cursor_node);
     else feep("");
     break;
-  case 033:  /* ESC */
-    if(vmode) return(1);
-    else feep("");
+  case 033:  /* ESC */ //not sure but its escape1
+    if(vmode) return(1); //if we are in vmode, return 1
+    else feep(""); //return an error
     break;
-  case '\f':
+  case '\f': //\f ("form feed", typed as CTRL-L):  Clear the screen and refresh the contents.
     refreshdisplay();
-  case ERR:
+  case ERR: //not sure but defined in NCURSES and probaly just default behavior
   default:
-    feep("");
+    feep(""); //return an error
     break;
   }
-  return(0);
+  return(0); //return 0
 }
 
 /*
@@ -142,7 +140,7 @@ static void open_directory(NODE *dir)
   DIR *d;
   struct dirent *dp;
   char path[MAXPATHLEN+1];
-  
+
   /* Make sure it's a directory */
   if(dir->info == NULL
      || (dir->info->stat.st_mode & S_IFMT) != S_IFDIR) {

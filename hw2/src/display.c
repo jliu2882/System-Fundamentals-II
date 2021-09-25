@@ -18,72 +18,72 @@ int screen_width;
 
 void initdisplay()
 {
-  initscr();
-  noecho();
-  cbreak();
-  erase();
+  initscr(); //initialize ncurses data structure
+  noecho(); //suppresses echo, which repeats user characters
+  cbreak(); //disables line buffering so each character prints without needing newline or fflush(stdout)
+  erase(); //clears the screen
   screen_height = LINES-1;  /* Last line reserved for error message */
-  screen_width = COLS;
-  cursor_line = 0;
-  move(0, 0);
-  refresh();
+  screen_width = COLS; //width of the screen
+  cursor_line = 0; //initial line of cursor
+  move(0, 0); //moves the cursor to 0,0(upper-left hand side)
+  refresh(); //refreshes the window
 }
 
 void redisplay()
 {
-  int first_line, last_line, indent;
-  NODE *first_node, *last_node;
+  int first_line, last_line, indent; //declare variables needed for the program
+  NODE *first_node, *last_node; //declare these as well
 
-  first_line = cursor_line;
-  first_node = cursor_node;
-  while(first_node->prev != NULL && first_line > 0) {
-    first_node = first_node->prev;
-    first_line--;
-  }
-  last_line = first_line;
-  last_node = first_node;
-  while(last_node->next != NULL && last_line < screen_height-1) {
-    last_node = last_node->next;
-    last_line++;
-  }
-  erase();
-  while(first_line <= last_line) {
-    move(first_line, 0);
-    if(first_node == cursor_node) {
-      standout();
-      clrtoeol();
-      move(first_line, 0);
-      addch('>');
-    } else {
-      addch(' ');
-    }
-    if(first_node->info != NULL)
-      indent = first_node->info->level;
-    else
-      indent = 0;
-    while(indent--) addch(' ');
-    addstr(first_node->data);
-    if(first_node == cursor_node) standend();
-    first_node = first_node->next;
-    first_line++;
-  }
-  move(cursor_line, 0);
-  refresh();
+  first_line = cursor_line; //start at the current line
+  first_node = cursor_node; //start at the current node
+  while(first_node->prev != NULL && first_line > 0) { //if there is a previous node AND a previous line
+    first_node = first_node->prev; //go to the previous node
+    first_line--; //go to the previous line
+  } //we should be on the first line/node unless there is a discrepancy
+  last_line = first_line; //start on the first line
+  last_node = first_node; //start on the first node
+  while(last_node->next != NULL && last_line < screen_height-1) { //if there is a next
+    last_node = last_node->next; //go to the next node
+    last_line++; //go to the next line
+  } //we should be on the last node, and the line should match that unless there is a discrepancy
+  erase(); //clear the screen
+  while(first_line <= last_line) { //while there is a line to display
+    move(first_line, 0); //move the cursor to the first character at the first line
+    if(first_node == cursor_node) { //if we are on cursor node
+      standout(); //Turns the attribute A_STANDOUT on, highlight the message
+      clrtoeol(); //Erase everything to the right of the cursor position
+      move(first_line, 0); //move to the front of the line
+      addch('>'); //add a prompting character
+    } else { //if we are not on the cursor node
+      addch(' '); //add a blank space instead
+    } //basically add a prompt to let user know we are expecting input on the cursor_node
+    if(first_node->info != NULL) //If there is information on the node
+      indent = first_node->info->level; //set the indent variable to be equal to the level
+    else //if there is no info
+      indent = 0; //our indent is just 0
+    while(indent--) addch(' '); //indent is just how many spaces we want
+    addstr(first_node->data); //print the data of the current node
+    if(first_node == cursor_node) standend();  //Turns off the attributes
+    first_node = first_node->next; //go to the next node
+    first_line++; //go to the next line
+  } //we printed the whole terminal from first to end line
+  move(cursor_line, 0); //move to the line where we expect user input from
+  refresh(); //show the changes
 }
 
 void enddisplay()
 {
-  erase();
-  refresh();
-  endwin();
+  erase(); //erase the screen
+  refresh(); //refresh the screen
+  endwin(); //restores the original terminal
 }
 
 /*
  * Refresh the display contents.
  */
 void refreshdisplay() {
-  clearok(stdscr, TRUE);
-  refresh();
+  clearok(stdscr, TRUE); //lets curses know its ok to clear the screen
+  refresh(); //clears the screen
 }
 
 /*
@@ -92,12 +92,12 @@ void refreshdisplay() {
 
 void feep(char *msg)
 {
-  fputc('\a', stderr);
-  if(*msg) {
-    standout();
-    mvaddstr(LINES-1, 0, msg);
-    standend();
-    refresh();
-    sleep(1);
+  fputc('\a', stderr); //Alerts the user with audible bell
+  if(*msg) { //If we have a message
+    standout(); //Turns the attribute A_STANDOUT on, highlight the message
+    mvaddstr(LINES-1, 0, msg); //Writes the message // What is LINES??
+    standend(); //Turns off the attributes
+    refresh(); //Gets the input to the terminal
+    sleep(1); //Pauses for one second
   }
 }
