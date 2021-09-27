@@ -42,32 +42,33 @@ int command(int vmode)
     break;
   case 'q': //q:  Quit the program.
     if(!vmode) return(1); //if we are in normal mode return success
-    else feep(""); //if we are in view mode, return error
+    else feep(""); //if we are in view mode, do nothing
     break;
   case 'o': //o:  Open the directory at the current line and display an indented list of its contents.
     if(!vmode) open_directory(cursor_node);
-    else feep("");
+    else feep(""); //if we are in view mode, do nothing
     break;
   case 'c': //c:  Close the directory at the current line, removing the indented list of its contents.
     if(!vmode) close_directory(cursor_node);
-    else feep("");
+    else feep(""); //if we are in view mode, do nothing
     break;
   case 'v': //v:  Open the file at the current line and enter "view mode".
-    if(!vmode) view_file(cursor_node);
-    else feep("");
+    if(!vmode) view_file(cursor_node); //view mode allows us to back into past lines
+    else feep(""); //if we are in view mode, do nothing
     break;
   case 033:  /* ESC */ //not sure but its escape1
     if(vmode) return(1); //if we are in vmode, return 1
     else feep(""); //return an error
     break;
+  case ERR: //any error such as EOF/getch() return fails
+    return -1;
   case '\f': //\f ("form feed", typed as CTRL-L):  Clear the screen and refresh the contents.
     refreshdisplay();
-  case ERR: //not sure but defined in NCURSES and probaly just default behavior
   default:
-    feep(""); //return an error
+    feep(""); //do nothing basically
     break;
   }
-  return(0); //return 0
+  return(0); //return 0 so we continue running
 }
 
 /*

@@ -19,8 +19,8 @@ int screen_width;
 void initdisplay()
 {
   initscr(); //initialize ncurses data structure
-  noecho(); //suppresses echo, which repeats user characters
   cbreak(); //disables line buffering so each character prints without needing newline or fflush(stdout)
+  noecho(); //suppresses echo, which repeats user characters
   erase(); //clears the screen
   screen_height = LINES-1;  /* Last line reserved for error message */
   screen_width = COLS; //width of the screen
@@ -38,7 +38,7 @@ void redisplay()
   first_node = cursor_node; //start at the current node
   while(first_node->prev != NULL && first_line > 0) { //if there is a previous node AND a previous line
     first_node = first_node->prev; //go to the previous node
-    first_line--; //go to the previous line
+    first_line--; //go to the previous linerst != N
   } //we should be on the first line/node unless there is a discrepancy
   last_line = first_line; //start on the first line
   last_node = first_node; //start on the first node
@@ -60,7 +60,7 @@ void redisplay()
     if(first_node->info != NULL) //If there is information on the node
       indent = first_node->info->level; //set the indent variable to be equal to the level
     else //if there is no info
-      indent = 0; //our indent is just 0
+      indent = 1; //our indent is just 0
     while(indent--) addch(' '); //indent is just how many spaces we want
     addstr(first_node->data); //print the data of the current node
     if(first_node == cursor_node) standend();  //Turns off the attributes
@@ -95,7 +95,7 @@ void feep(char *msg)
   fputc('\a', stderr); //Alerts the user with audible bell
   if(*msg) { //If we have a message
     standout(); //Turns the attribute A_STANDOUT on, highlight the message
-    mvaddstr(LINES-1, 0, msg); //Writes the message // What is LINES??
+    mvaddstr(LINES-1, 0, msg); //Writes the message at the bottom
     standend(); //Turns off the attributes
     refresh(); //Gets the input to the terminal
     sleep(1); //Pauses for one second

@@ -13,30 +13,41 @@
 
 void view_file(NODE *node)
 {
-  FILE *f;
-  char buf[MAXLINE+1];
-  int save_cursor_line = cursor_line;
-  NODE *save_cursor_node = cursor_node;
-  NODE *first, *last, *new, *next;
+  FILE *f; //Creates a pointer to a file
+  char buf[MAXLINE+1]; //replace with infinite ??
+  int save_cursor_line = cursor_line; //saves cursor line
+  NODE *save_cursor_node = cursor_node; //saves cursor node
+  NODE *first, *last, *new, *next; //declares pointers yay
 
-  if(node->info == NULL
-     || (((node->info->stat.st_mode & S_IFMT) != S_IFREG)
-	 && ((node->info->stat.st_mode & S_IFMT) != S_IFLNK))) {
-    feep("Not a regular file or link");
-    return;
+  if(node->info == NULL //if we have no information on the file type
+     || (((node->info->stat.st_mode & S_IFMT) != S_IFREG) //or if its not a regular file
+	 && ((node->info->stat.st_mode & S_IFMT) != S_IFLNK))) { //and its not a regular link
+    feep("Not a regular file or link"); //let us know its not regular
+    return; //return
   }
-  if ((f = fopen(node->info->path, "r")) == NULL) {
-    feep("Can't open file");
-    return;
+  if ((f = fopen(node->info->path, "r")) == NULL) { //if we don't have permission to read the file
+    feep("Can't open file"); //let us know we cant read
+    return; //return
   }
-  first = last = NULL;
-  while((new = malloc(sizeof(NODE))) != NULL) {
+  first = last = NULL; //initialize nodes as null
+  while((new = calloc(1,sizeof(NODE))) != NULL) { //while we have memory, we allocate until we break no free??
     if(fgets(buf, MAXLINE, f) == NULL) break;
     strncpy(new->data, buf, MAXLINE);
+
+    //bootleg way to get info to add
+    FILE_INFO *info; //Declares a variable to store file info
+    if((info = calloc(1,sizeof(FILE_INFO))) == NULL){ //Allocate space for info ??when do we free
+      feep("Out of memory"); //Lets the user know we ran out of space
+      exit(EXIT_FAILURE); //Return an error if we ran out of space
+    }
+    new->info = info; //Sets the information about the file to be info
+    new->info->level = 1;
+
+    //initailzie info properly
     if(first == NULL) first = last = new;
     else last = insert_node(last, new);
   }
-  fclose(f);
+  fclose(f); //close the file
   if(first != NULL) {
     cursor_node = first;
     cursor_line = 0;
@@ -45,10 +56,14 @@ void view_file(NODE *node)
     feep("Empty file");
     return;
   }
-  while(first->next != NULL) {
+  while(first->next != NULL) { //while there is a next node
     next = first->next;  /* Save because delete_node frees its arg */
-    delete_node(first);
+    delete_node(first); //delete the next node, and move the other nodes up
   }
   next = next;//temp fix lmao
-  free(first);
+  if(first->info != NULL) free(first->info); //if the deleted node had info, we want to free it
+  free(first);//free the first node
+  cursor_node=save_cursor_node;
+  cursor_line=save_cursor_line;
+  refreshdisplay();
 }

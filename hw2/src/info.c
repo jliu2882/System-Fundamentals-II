@@ -27,8 +27,15 @@ NODE *get_info(char *path)
   FILE_INFO *info; //Declares a variable to store file info
   NODE *node; //Declares a node to store our information
 
-  if((info = malloc(sizeof(FILE_INFO))) == NULL //Allocate space for info
-     || (node = malloc(sizeof(NODE))) == NULL) { //Allocate space for node
+  if((info = calloc(1,sizeof(FILE_INFO))) == NULL //Allocate space for info ??when do we free
+     || (node = calloc(1,sizeof(NODE))) == NULL) { //Allocate space for node
+    //maybe check if either are allocated then free
+    if(info!=NULL){
+      free(info); //free if we allocated
+    }
+    if(node!=NULL){
+      free(node); //free if we allocated
+    }
     feep("Out of memory"); //Lets the user know we ran out of space
     return(NULL); //Return an error if we ran out of space
   }
@@ -154,7 +161,10 @@ void delete_node(NODE *node)
   if(next == NULL) return; //if it was null, then we don't need to delete the next node
   node->next = next->next; //jump over the next node
   if(node->next != NULL) node->next->prev = node; //if the new next is valid, fix the previous node
-  if(next->info != NULL) free(next->info); //if the deleted node had info, we want to free it
-  free(next); //free the node
-  //potential bug, don't free data
+  if(next->info != NULL){
+    free(next->info);
+  }  //if the deleted node had info, we want to free it
+  printf("%s",next->data);
+  free(next); //free the deleted node
+  //potential bug, don't free data/parent??
 }

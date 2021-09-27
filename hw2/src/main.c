@@ -17,7 +17,6 @@ int main(int argc, char *argv[])
 {
   int err; //Declares variable err
   char *getcwd(), *base; //Declares the function getcwd() as well as a string base
-
   if(argc == 2) { //If we only have one other argument(the directory), we want to validate it
     if(chdir(argv[1]) < 0) { //If we cannot reach the directory with chdir, it must have been invalid
       fprintf(stderr, "Can't change directory to %s\n", argv[1]); //Let the user know the directory is invalid
@@ -36,5 +35,6 @@ int main(int argc, char *argv[])
   cursor_line = 0; //Initialize cursor_line(redundant since we call in initdisplay??)
   do redisplay(); while(!(err = command(0))); //negative return = fail; otherwise = user ends
   enddisplay(); //ends the program
+  free(base); //frees memory for base
   exit(err < 0 ? EXIT_FAILURE : EXIT_SUCCESS); //If we ran into any errors we want to exit with failure
 }
