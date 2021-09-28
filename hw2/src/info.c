@@ -29,7 +29,6 @@ NODE *get_info(char *path)
 
   if((info = calloc(1,sizeof(FILE_INFO))) == NULL //Allocate space for info ??when do we free
      || (node = calloc(1,sizeof(NODE))) == NULL) { //Allocate space for node
-    //maybe check if either are allocated then free
     if(info!=NULL){
       free(info); //free if we allocated
     }
@@ -69,7 +68,7 @@ static void cvt_info(FILE_INFO *info, char *buf)
   else //This is the case of no "/" or just "/"
       n = info->path; //n would just be our path
   pw = getpwuid(info->stat.st_uid); //Searches the database(?) for a matching uid and returns a password
-  sprintf(buf, "%.10s %3ld %-8.8s %li %.12s %s", //Write all this into buf
+  sprintf(buf, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
 	  cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
 	  info->stat.st_nlink, //The number of hard links
 	  pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
@@ -164,7 +163,8 @@ void delete_node(NODE *node)
   if(next->info != NULL){
     free(next->info);
   }  //if the deleted node had info, we want to free it
-  printf("%s",next->data);
+
+
   free(next); //free the deleted node
   //potential bug, don't free data/parent??
 }

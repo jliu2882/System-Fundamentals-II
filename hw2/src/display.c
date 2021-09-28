@@ -19,8 +19,8 @@ int screen_width;
 void initdisplay()
 {
   initscr(); //initialize ncurses data structure
-  cbreak(); //disables line buffering so each character prints without needing newline or fflush(stdout)
   noecho(); //suppresses echo, which repeats user characters
+  cbreak(); //disables line buffering so each character prints without needing newline or fflush(stdout)
   erase(); //clears the screen
   screen_height = LINES-1;  /* Last line reserved for error message */
   screen_width = COLS; //width of the screen

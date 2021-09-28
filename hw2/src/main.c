@@ -34,7 +34,14 @@ int main(int argc, char *argv[])
   initdisplay(); //initializes the display
   cursor_line = 0; //Initialize cursor_line(redundant since we call in initdisplay??)
   do redisplay(); while(!(err = command(0))); //negative return = fail; otherwise = user ends
-  enddisplay(); //ends the program
+
+  while(cursor_node->next != NULL) { //while there is a next node
+    delete_node(cursor_node); //delete the next node, and move the other nodes up
+  }
+  if(cursor_node->info != NULL) free(cursor_node->info); //if the deleted node had info, we want to free it
+  free(cursor_node);//free the first node
   free(base); //frees memory for base
+
+  enddisplay(); //ends the program
   exit(err < 0 ? EXIT_FAILURE : EXIT_SUCCESS); //If we ran into any errors we want to exit with failure
 }

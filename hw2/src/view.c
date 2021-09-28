@@ -38,14 +38,18 @@ void view_file(NODE *node)
     FILE_INFO *info; //Declares a variable to store file info
     if((info = calloc(1,sizeof(FILE_INFO))) == NULL){ //Allocate space for info ??when do we free
       feep("Out of memory"); //Lets the user know we ran out of space
-      exit(EXIT_FAILURE); //Return an error if we ran out of space
+      free(new); //at least try to free everything
+      return; //should exit but for the sake of freeing memory I guess
     }
     new->info = info; //Sets the information about the file to be info
-    new->info->level = 1;
+    new->info->level = 0;
 
     //initailzie info properly
     if(first == NULL) first = last = new;
     else last = insert_node(last, new);
+  }
+  if(new!=NULL){ //we only break the loop if new is null or we just allocated new and did nothing
+    free(new);
   }
   fclose(f); //close the file
   if(first != NULL) {
@@ -65,5 +69,5 @@ void view_file(NODE *node)
   free(first);//free the first node
   cursor_node=save_cursor_node;
   cursor_line=save_cursor_line;
-  refreshdisplay();
+ // refreshdisplay(); //clear display (REMOVE once we figure bug) IDK BUT I DID IT LMAO
 }

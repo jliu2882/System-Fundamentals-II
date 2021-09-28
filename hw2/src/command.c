@@ -170,6 +170,7 @@ static void open_directory(NODE *dir)
     node->info->parent = dir;
     node->info->level = dir->info->level+1;
   }
+  free(d);
 }
 
 /*
