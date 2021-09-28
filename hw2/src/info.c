@@ -69,12 +69,12 @@ static void cvt_info(FILE_INFO *info, char *buf)
       n = info->path; //n would just be our path
   pw = getpwuid(info->stat.st_uid); //Searches the database(?) for a matching uid and returns a password
   sprintf(buf, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
-	  cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
-	  info->stat.st_nlink, //The number of hard links
-	  pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
-	  info->stat.st_size, //The total size in bytes
-	  ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
-	  n); //As well as our path
+    cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+    info->stat.st_nlink, //The number of hard links
+    pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+    info->stat.st_size, //The total size in bytes
+    ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+    n); //As well as our path
 }
 
 /*
@@ -96,7 +96,7 @@ static char *cvt_mode(mode_t mode)
     case 0:
       /* Need to handle setuid/setgid */
       if((mode & S_ISUID && i == 6)
-	 || (mode & S_ISGID && i == 3)) c = 's';
+   || (mode & S_ISGID && i == 3)) c = 's';
       else c = 'x';
       break;
     case 1:
@@ -163,8 +163,10 @@ void delete_node(NODE *node)
   if(next->info != NULL){
     free(next->info);
   }  //if the deleted node had info, we want to free it
-
-
+//if(next->data != NULL){
+ //   free(next->data);
+//  }  //remove once we remove maxline
   free(next); //free the deleted node
   //potential bug, don't free data/parent??
 }
+
