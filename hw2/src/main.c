@@ -35,6 +35,11 @@ int main(int argc, char *argv[])
   cursor_line = 0; //Initialize cursor_line(redundant since we call in initdisplay??)
   do redisplay(); while(!(err = command(0))); //negative return = fail; otherwise = user ends
 
+
+  while(cursor_node->prev != NULL && cursor_node > 0) { //if there is a previous node AND a previous line
+    cursor_node = cursor_node->prev; //go to the previous node
+    cursor_line--; //go to the previous linerst != N
+  } //we should be on the first line/node unless there is a discrepancy
   while(cursor_node->next != NULL) { //while there is a next node
     delete_node(cursor_node); //delete the next node, and move the other nodes up
   }

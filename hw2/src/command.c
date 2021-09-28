@@ -78,7 +78,7 @@ int command(int vmode)
 static void next_line()
 {
   if(cursor_node->next != NULL) {
-    cursor_node = cursor_node->next;
+    cursor_node = cursor_node->next; //FOUND A BUG
     if(cursor_line < screen_height-1) cursor_line++;
   } else {
     feep("");
