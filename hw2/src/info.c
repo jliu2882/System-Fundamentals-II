@@ -72,7 +72,7 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
       n = info->path; //n would just be our path
   pw = getpwuid(info->stat.st_uid); //Searches for a matching uid and returns a password
 
-
+#ifdef NO_MAXLINE // I know this is bad code and I could optimize the runtime/general look but it runs man
   if(!humanReadable){ //normal mode
  //didnt work or as least didnt try to go further than this, ok nvm it worked but I did a wonky workaround
     size_t needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
@@ -164,6 +164,54 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
         n); //As well as our path
     }
   }
+#else //again i know its janky; especially since I'm doubling the already janky code
+if(!humanReadable){ //normal mode
+    sprintf(buf, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
+      cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+      info->stat.st_nlink, //The number of hard links
+      pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+      info->stat.st_size, //The total size(in bytes unless specified otherwise)
+      ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+      n); //As well as our path
+  } else{ //human readable mode //hard-coded but I didn't want to deal with allocating memory for a char*
+
+    int size = info->stat.st_size; //get the size of the file
+    if(size>pow(2,30)){ //large large files(treat as M lol)
+      sprintf(buf, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
+        cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+        info->stat.st_nlink, //The number of hard links
+        pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+        (long int)(info->stat.st_size/pow(10,6)), //The total size(in bytes unless specified otherwise)
+        ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+        n); //As well as our path
+    } else if(size>pow(2,20) && size<pow(2,30)){ //M
+      sprintf(buf, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
+        cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+        info->stat.st_nlink, //The number of hard links
+        pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+        (long int)(info->stat.st_size/pow(10,6)), //The total size(in bytes unless specified otherwise)
+        ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+        n); //As well as our path
+    } else if(size>pow(2,10) && size<pow(2,20)){ //K
+      sprintf(buf, "%.10s %3ld %-8.8s % 7liK %.12s %s", //Write all this into buf
+        cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+        info->stat.st_nlink, //The number of hard links
+        pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+        (long int)(info->stat.st_size/pow(10,3)), //The total size(in bytes unless specified otherwise)
+        ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+        n); //As well as our path
+    } else{ //Small files
+      sprintf(buf, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
+        cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+        info->stat.st_nlink, //The number of hard links
+        pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+        info->stat.st_size, //The total size(in bytes unless specified otherwise)
+        ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+        n); //As well as our path
+    }
+  }
+
+#endif
 }
 
 /*
@@ -251,9 +299,12 @@ void delete_node(NODE *node)
   if(next->info != NULL){
     free(next->info);
   }  //if the deleted node had info, we want to free it
+
+#ifdef NO_MAXLINE //if data is an array we don't need to free it
   if(next->data != NULL){
     free(next->data);
   }  //if the deleted node had data, we want to free it
+#endif
   free(next); //free the deleted node
 }
 

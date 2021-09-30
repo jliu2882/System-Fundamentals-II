@@ -143,7 +143,9 @@ int main(int argc, char *argv[]) //Could have made a usage function but it is wh
     delete_node(cursor_node); //delete the next node, and move the other nodes up
   }
   if(cursor_node->info != NULL) free(cursor_node->info); //if the deleted node had info, we want to free it
+#ifdef NO_MAXLINE //if data is an array we don't need to free it
   if(cursor_node->data != NULL) free(cursor_node->data); //if the deleted node had info, we want to free it
+#endif
   free(cursor_node);//free the first node
   free(base); //frees memory for base
 

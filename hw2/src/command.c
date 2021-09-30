@@ -176,9 +176,11 @@ static void open_directory(NODE *dir)
     if(new->info->stat.st_dev == dir->info->stat.st_dev
        && new->info->stat.st_ino == dir->info->stat.st_ino) {
       free(new->info);
+  #ifdef NO_MAXLINE //if data is an array we don't need to free it
       if(new->data){
         free(new->data);
       }
+  #endif
       free(new);
       continue;       /* Don't display '.' */
     }

@@ -14,11 +14,15 @@
 void view_file(NODE *node)
 {
   FILE *f; //Creates a pointer to a file
-  //char buf[MAXLINE+1]; //replace with infinite ??
- // char buf[256+1]; //replace with infinite ??
+
+#ifdef NO_MAXLINE //if data is an array we don't need to free it
   char * buf = NULL;
   size_t len = 0;
   ssize_t read;
+#else
+  char buf[MAXLINE+1]; //replace with infinite ??
+ // char buf[256+1]; //replace with infinite ??
+#endif
 
   int save_cursor_line = cursor_line; //saves cursor line
   NODE *save_cursor_node = cursor_node; //saves cursor node
@@ -36,14 +40,15 @@ void view_file(NODE *node)
   }
   first = last = NULL; //initialize nodes as null
   while((new = calloc(1,sizeof(NODE))) != NULL) { //while we have memory, we allocate until we break no free??
-   // if(fgets(buf, MAXLINE, f) == NULL) break;
+#ifdef NO_MAXLINE //if data is an array we don't need to free it
     if((read=getline(&buf, &len, f))<=0) break;
-  //  strncpy(new->data, buf, MAXLINE);
-
- //   strncpy(new->data, buf, 256);
   ///  strncpy(new->data, buf, read);
     new->data = strdup(buf);
-
+#else
+    if(fgets(buf, MAXLINE, f) == NULL) break;
+    strncpy(new->data, buf, MAXLINE);
+ //   strncpy(new->data, buf, 256);
+#endif
     //bootleg way to get info to add
     FILE_INFO *info; //Declares a variable to store file info
     if((info = calloc(1,sizeof(FILE_INFO))) == NULL){ //Allocate space for info ??when do we free
@@ -57,16 +62,19 @@ void view_file(NODE *node)
     if(first == NULL) first = last = new;
     else last = insert_node(last, new);
 
+#ifdef NO_MAXLINE //if data is an array we don't need to free it
     free(buf);
     buf=NULL;
-
+#endif
   }
   fclose(f); //close the file
 
+#ifdef NO_MAXLINE //if data is an array we don't need to free it
   if(buf!=NULL){
     free(buf);
     buf=NULL;
   }
+#endif
 
   if(new!=NULL){ //we only break the loop if new is null or we just allocated new and did nothing
     free(new);
@@ -85,7 +93,9 @@ void view_file(NODE *node)
   }
   next = next;//temp fix lmao
   if(first->info != NULL) free(first->info); //if the deleted node had info, we want to free it
+#ifdef NO_MAXLINE //if data is an array we don't need to free it
   if(first->data != NULL) free(first->data); //if the deleted node had info, we want to free it
+#endif
   free(first);//free the first node
   cursor_node=save_cursor_node;
   cursor_line=save_cursor_line;
