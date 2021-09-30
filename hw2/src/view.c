@@ -45,7 +45,15 @@ void view_file(NODE *node)
   ///  strncpy(new->data, buf, read);
     new->data = strdup(buf);
 #else
+    //deal with line being more than MAXLINE
+   // char buf2[MAXLINE+1]; //replace with infinite ??
     if(fgets(buf, MAXLINE, f) == NULL) break;
+   // if(strlen(buf)>=MAXLINE-1){
+    //  if(fgets(buf2, MAXLINE, f) == NULL) break;
+   //   while(strlen(buf2)>=MAXLINE-1){
+   //     if(fgets(buf2, MAXLINE, f) == NULL) break; //fix bug
+   //   }
+   // }
     strncpy(new->data, buf, MAXLINE);
  //   strncpy(new->data, buf, 256);
 #endif

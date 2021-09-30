@@ -63,7 +63,15 @@ void redisplay()
       indent = 1; //our indent is just 0
     while(indent--) addch(' '); //indent is just how many spaces we want
     addstr(first_node->data); //print the data of the current node
-    if(first_node == cursor_node) standend();  //Turns off the attributes
+
+    //deal with line being more than MAXLINE
+  //  addnstr(first_node->data,COLS-1); //prints enough for the width, expands as window expands
+
+    if(first_node == cursor_node){
+       standend();  //Turns off the attributes
+     // move(first_line, 0); //move to the front of the line
+     // addch('>'); //add a prompting character
+    }
     first_node = first_node->next; //go to the next node
     first_line++; //go to the next line
   } //we printed the whole terminal from first to end line

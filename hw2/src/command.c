@@ -153,7 +153,7 @@ static void open_directory(NODE *dir)
   char path[MAXPATHLEN+1];
 
 //This is for sorting the items and appending, not sorting it all together
-  NODE *firstNode; //first node to sort by
+  NODE *firstNode = NULL; //first node to sort by
   int firstFlag = 0; //alert when first node is defined
   int n = 0; //number of nodes
 
