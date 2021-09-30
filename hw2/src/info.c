@@ -165,15 +165,15 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
     }
   }
 #else //again i know its janky; especially since I'm doubling the already janky code
-if(!humanReadable){ //normal mode
-    sprintf(buf, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
-      cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
-      info->stat.st_nlink, //The number of hard links
-      pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
-      info->stat.st_size, //The total size(in bytes unless specified otherwise)
-      ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
-      n); //As well as our path
-  } else{ //human readable mode //hard-coded but I didn't want to deal with allocating memory for a char*
+    if(!humanReadable){ //normal mode
+        sprintf(buf, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
+          cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+          info->stat.st_nlink, //The number of hard links
+          pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+          info->stat.st_size, //The total size(in bytes unless specified otherwise)
+          ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+          n); //As well as our path
+    } else{ //human readable mode //hard-coded but I didn't want to deal with allocating memory for a char*
 
     int size = info->stat.st_size; //get the size of the file
     if(size>pow(2,30)){ //large large files(treat as M lol)

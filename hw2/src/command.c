@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <curses.h>
+#include <curses.h>
 #include <dirent.h>
 #include <string.h>
 #include <strings.h>
@@ -65,7 +66,7 @@ int command(int vmode)
     if(!vmode) view_file(cursor_node); //view mode allows us to back into past lines
     else feep(""); //if we are in view mode, do nothing
     break;
-  case 033:  /* ESC */ //not sure but its escape1
+  case 033:  /* ESC */ //allows for cases of arrow keys and del
     if(vmode) return(1); //if we are in vmode, return 1
     else feep(""); //return an error
     break;
@@ -150,6 +151,7 @@ static void open_directory(NODE *dir)
   DIR *d;
   struct dirent *dp;
   char path[MAXPATHLEN+1];
+
 //This is for sorting the items and appending, not sorting it all together
   NODE *firstNode; //first node to sort by
   int firstFlag = 0; //alert when first node is defined
@@ -196,15 +198,12 @@ static void open_directory(NODE *dir)
   NODE *currentNode = firstNode; //keep firstnode just in case
   for(; n>0; n--){ //insertion sort
     if(currentNode==NULL){
-      break;
+      break; //should never occur
     }
     NODE *futureNode = currentNode->next; //keep track of the future
-    if(futureNode==NULL){
-      break;
-    }
     NODE *pastNode = currentNode->prev; //keep track of the past
     if(pastNode==NULL){
-      break;
+      break; //should never occur
     }
     if(pastNode!=NULL && pastNode != firstNode->prev) { //check if pastNode exists
       while(compareNode(currentNode,pastNode)<0) { //find where we belong
