@@ -14,7 +14,8 @@
 void view_file(NODE *node)
 {
   FILE *f; //Creates a pointer to a file
-  char buf[MAXLINE+1]; //replace with infinite ??
+  //char buf[MAXLINE+1]; //replace with infinite ??
+  char buf[256+1]; //replace with infinite ??
  // char * buf = NULL;
   //size_t len = 0;
  // ssize_t read;
@@ -35,9 +36,12 @@ void view_file(NODE *node)
   }
   first = last = NULL; //initialize nodes as null
   while((new = calloc(1,sizeof(NODE))) != NULL) { //while we have memory, we allocate until we break no free??
-    if(fgets(buf, MAXLINE, f) == NULL) break;
+   // if(fgets(buf, MAXLINE, f) == NULL) break;
+    if(fgets(buf, 256, f) == NULL) break;
  //   if((read=getline(&buf, &len, f))<=0) break;
-    strncpy(new->data, buf, MAXLINE);
+   // strncpy(new->data, buf, MAXLINE);
+
+    strncpy(new->data, buf, 256);
  //   strncpy(new->data, buf, read);
 
     //bootleg way to get info to add
