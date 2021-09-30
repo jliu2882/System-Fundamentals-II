@@ -18,6 +18,15 @@ static void previous_line();
 static void next_screen();
 static void previous_screen();
 static void open_directory(NODE *dir);
+
+static int compareNode(NODE *first, NODE* second);
+
+/*
+ * Reinsert a node into a new position
+ */
+NODE *reinsert_node(NODE *old, NODE *new);
+//include here since we cant change browse.h and i dont want to include info.c
+
 /*
  * Process commands
  * vmode is 1 if in view mode, 0 if in normal mode
@@ -141,6 +150,10 @@ static void open_directory(NODE *dir)
   DIR *d;
   struct dirent *dp;
   char path[MAXPATHLEN+1];
+//This is for sorting the items and appending, not sorting it all together
+  NODE *firstNode; //first node to sort by
+  int firstFlag = 0; //alert when first node is defined
+  int n = 0; //number of nodes
 
   /* Make sure it's a directory */
   if(dir->info == NULL
@@ -169,20 +182,43 @@ static void open_directory(NODE *dir)
       free(new);
       continue;       /* Don't display '.' */
     }
+    if(!firstFlag){ //get the first node
+      firstNode=new;
+      firstFlag=1;
+    }
+    n++; //keep track of all nodes we insert
     node = insert_node(node, new);
     node->info->parent = dir;
     node->info->level = dir->info->level+1;
   }
-  //insertion sort(MAKE CASE INSENSITIVE//strcasecmp)
-    //1. start with the first node (currentNode), and how long it goes(n)
-    //2. for(int i =0; i < n; i++){
-    //  a. futureNode = currentNode->next //keep track of the future
-    //  b. pastNode = currentNode->prev //keep track of the past
-    //  b. while(currentNode->data < pastNode->data){ pastNode=pastNode->prev } //find where we belong
-    //  c. insert_node(pastNode, currentNode) //go there
-    //  c.5 delete node
-    //  d. currentNode = futureNode //move on
-    //3. } //lmao
+  NODE *currentNode = firstNode; //keep firstnode just in case
+  for(; n>0; n--){ //insertion sort
+    if(currentNode==NULL){
+      break;
+    }
+    NODE *futureNode = currentNode->next; //keep track of the future
+    if(futureNode==NULL){
+      break;
+    }
+    NODE *pastNode = currentNode->prev; //keep track of the past
+    if(pastNode==NULL){
+      break;
+    }
+    if(pastNode!=NULL && pastNode != firstNode->prev && pastNode !=firstNode) { //check if pastNode exists
+      while(compareNode(currentNode,pastNode)<0) { //find where we belong
+        if(pastNode->prev!=NULL && pastNode != firstNode->prev){
+          pastNode=pastNode->prev; //positive means past goes first
+        } else{
+          break;
+        }
+      }
+      if(pastNode->next == firstNode){
+        firstNode=currentNode;
+      }
+      reinsert_node(pastNode, currentNode); //go there
+    }
+    currentNode = futureNode; //move on
+  }
   free(d);
 }
 
@@ -202,4 +238,45 @@ void close_directory(NODE *dir)
       delete_node(dir);
     }
   }
+}
+
+static int compareNode(NODE *first, NODE* second){
+  if(first==NULL || second==NULL){
+    return 0;
+  }
+  if(sortBy==1){ //sort by name
+    return (strcasecmp(first->info->path,second->info->path));
+  } else if(sortBy==2){ //sort by size
+    return first->info->stat.st_size-second->info->stat.st_size;
+  } else if(sortBy==3){ //sort by date/time
+    if(first->info->stat.st_mtim.tv_sec==second->info->stat.st_mtim.tv_sec){ //if sec equal check nano
+      if(second->info->stat.st_mtim.tv_nsec - first->info->stat.st_mtim.tv_nsec > 0){
+        return 1; //catch cases of round to 0 i guess
+      } else if(second->info->stat.st_mtim.tv_nsec - first->info->stat.st_mtim.tv_nsec < 0){
+        return -1; //catch cases of round to 0 i guess
+      }
+      return 0; //if they are equal to the millisecond
+    } else{ //one of the seconds are different
+      if(second->info->stat.st_mtim.tv_sec - first->info->stat.st_mtim.tv_sec > 0){
+        return 1; //catch cases of round to 0 i guess
+      } else if(second->info->stat.st_mtim.tv_sec - first->info->stat.st_mtim.tv_sec < 0){
+        return -1; //catch cases of round to 0 i guess
+      }
+      return 0; //should never reach here
+    }
+  }
+  return 0; //sort by none/default, nodes are fine where they are
+}
+/*
+ * Reinsert a node into a new position
+ */
+NODE *reinsert_node(NODE *old, NODE *new){
+  //"delete" the node at its old spotwithout freeing it since we must reinsert it
+  if(new==old){ //idk is this a case, must be
+    return new;
+  }
+  new->prev->next = new->next; //the node before the new node should jump over it
+  if(new->next!=NULL) new->next->prev = new->prev; //if there is a next node, it should jump back over it
+  //reinsert it
+  return insert_node(old,new); //Insert the node that is no longer in the "linked list" back in after old
 }

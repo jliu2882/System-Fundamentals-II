@@ -14,9 +14,8 @@
 #include <string.h>
 #include "browse.h"
 
+//TODO: check piazza
 
-//TODO info.c: move small files into !humanreadable case and use the M as a catchall for large files
-//TODO info.c: compress the cases with conditional ? :
 
 int main(int argc, char *argv[]) //Could have made a usage function but it is what it is
 {
@@ -74,7 +73,7 @@ int main(int argc, char *argv[]) //Could have made a usage function but it is wh
         if(strcmp(optarg,"name")==0){ //strcasecmp if that's needed
           sortBy = 1; //arbitrarily choose 1 as name
         } else if(strcmp(optarg,"size")==0){
-          sortBy = 2; //arbitrarily choose 2 as size
+          sortBy = 2; //arbitrarily choose 2 as size; oops its out of order with date
         } else if(strcmp(optarg,"date")==0){
           sortBy = 3; //arbitrarily choose 3 as date
         } else if(strcmp(optarg,"none")==0){

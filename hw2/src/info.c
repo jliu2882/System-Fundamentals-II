@@ -94,7 +94,24 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
   } else{ //human readable mode //hard-coded but I didn't want to deal with allocating memory for a char*
 
     int size = info->stat.st_size; //get the size of the file
-    if(size>pow(2,20) && size<pow(2,30)){ //M
+    if(size>pow(2,30)){ //large large files(treat as M lol)
+      size_t needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
+        cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+        info->stat.st_nlink, //The number of hard links
+        pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+        (long int)(info->stat.st_size/pow(10,6)), //The total size(in bytes unless specified otherwise)
+        ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+        n) + 1;
+      test->data = malloc(needed);
+
+      sprintf(test->data, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
+        cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+        info->stat.st_nlink, //The number of hard links
+        pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+        (long int)(info->stat.st_size/pow(10,6)), //The total size(in bytes unless specified otherwise)
+        ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+        n); //As well as our path
+    } else if(size>pow(2,20) && size<pow(2,30)){ //M
       size_t needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
         cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
         info->stat.st_nlink, //The number of hard links
@@ -128,7 +145,7 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
         (long int)(info->stat.st_size/pow(10,3)), //The total size(in bytes unless specified otherwise)
         ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
         n); //As well as our path
-    } else{ //Small files and I guess bigger files as well
+    } else{ //Small files
       size_t needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
         cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
         info->stat.st_nlink, //The number of hard links
@@ -220,7 +237,6 @@ NODE *insert_node(NODE *old, NODE *new)
   if(new->next != NULL) new->next->prev = new; //if the next node wasn't null, we want to set its prev to the new
   return(new); //return the new node
 }
-
 /*
  * Delete the node following a given node and free it
  */
