@@ -12,8 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <math.h>
 
 #include "browse.h"
+
+int humanReadable;
 
 static void cvt_info(FILE_INFO *info, char *buf);
 static char *cvt_mode(mode_t mode);
@@ -67,14 +70,43 @@ static void cvt_info(FILE_INFO *info, char *buf)
       n++; //Move n to start at the next character(Skip initial "/")
   else //This is the case of no "/" or just "/"
       n = info->path; //n would just be our path
-  pw = getpwuid(info->stat.st_uid); //Searches the database(?) for a matching uid and returns a password
-  sprintf(buf, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
-    cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
-    info->stat.st_nlink, //The number of hard links
-    pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
-    info->stat.st_size, //The total size in bytes
-    ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
-    n); //As well as our path
+  pw = getpwuid(info->stat.st_uid); //Searches for a matching uid and returns a password
+  if(!humanReadable){ //normal mode
+    sprintf(buf, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
+      cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+      info->stat.st_nlink, //The number of hard links
+      pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+      info->stat.st_size, //The total size(in bytes unless specified otherwise)
+      ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+      n); //As well as our path
+  } else{ //human readable mode //hard-coded but I didn't want to deal with allocating memory for a char*
+    int size = info->stat.st_size; //get the size of the file
+    if(size>pow(2,20) && size<pow(2,30)){ //M
+      sprintf(buf, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
+        cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+        info->stat.st_nlink, //The number of hard links
+        pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+        (long int)(info->stat.st_size/pow(10,6)), //The total size(in bytes unless specified otherwise)
+        ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+        n); //As well as our path
+    } else if(size>pow(2,10) && size<pow(2,20)){ //K
+      sprintf(buf, "%.10s %3ld %-8.8s % 7liK %.12s %s", //Write all this into buf
+        cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+        info->stat.st_nlink, //The number of hard links
+        pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+        (long int)(info->stat.st_size/pow(10,3)), //The total size(in bytes unless specified otherwise)
+        ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+        n); //As well as our path
+    } else{ //Small files
+      sprintf(buf, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
+        cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+        info->stat.st_nlink, //The number of hard links
+        pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+        info->stat.st_size, //The total size(in bytes unless specified otherwise)
+        ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+        n); //As well as our path
+    }
+  }
 }
 
 /*
@@ -163,10 +195,6 @@ void delete_node(NODE *node)
   if(next->info != NULL){
     free(next->info);
   }  //if the deleted node had info, we want to free it
-//if(next->data != NULL){
- //   free(next->data);
-//  }  //remove once we remove maxline
   free(next); //free the deleted node
-  //potential bug, don't free data/parent??
 }
 

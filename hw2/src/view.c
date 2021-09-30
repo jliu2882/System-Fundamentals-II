@@ -15,6 +15,10 @@ void view_file(NODE *node)
 {
   FILE *f; //Creates a pointer to a file
   char buf[MAXLINE+1]; //replace with infinite ??
+ // char * buf = NULL;
+  //size_t len = 0;
+ // ssize_t read;
+
   int save_cursor_line = cursor_line; //saves cursor line
   NODE *save_cursor_node = cursor_node; //saves cursor node
   NODE *first, *last, *new, *next; //declares pointers yay
@@ -32,7 +36,9 @@ void view_file(NODE *node)
   first = last = NULL; //initialize nodes as null
   while((new = calloc(1,sizeof(NODE))) != NULL) { //while we have memory, we allocate until we break no free??
     if(fgets(buf, MAXLINE, f) == NULL) break;
+ //   if((read=getline(&buf, &len, f))<=0) break;
     strncpy(new->data, buf, MAXLINE);
+ //   strncpy(new->data, buf, read);
 
     //bootleg way to get info to add
     FILE_INFO *info; //Declares a variable to store file info
@@ -44,14 +50,23 @@ void view_file(NODE *node)
     new->info = info; //Sets the information about the file to be info
     new->info->level = 0;
 
-    //initailzie info properly
     if(first == NULL) first = last = new;
     else last = insert_node(last, new);
+
+ //   free(buf);
+//    buf=NULL;
+
   }
+  fclose(f); //close the file
+
+//  if(buf!=NULL){
+ //   free(buf);
+ //   buf=NULL;
+ // }
+
   if(new!=NULL){ //we only break the loop if new is null or we just allocated new and did nothing
     free(new);
   }
-  fclose(f); //close the file
   if(first != NULL) {
     cursor_node = first;
     cursor_line = 0;
@@ -69,5 +84,5 @@ void view_file(NODE *node)
   free(first);//free the first node
   cursor_node=save_cursor_node;
   cursor_line=save_cursor_line;
- // refreshdisplay(); //clear display (REMOVE once we figure bug) IDK BUT I DID IT LMAO
+ // refreshdisplay(); //clear display (REMOVE once we figure bug) I DID IT
 }

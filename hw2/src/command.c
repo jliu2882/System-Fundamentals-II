@@ -18,11 +18,11 @@ static void previous_line();
 static void next_screen();
 static void previous_screen();
 static void open_directory(NODE *dir);
-
 /*
  * Process commands
  * vmode is 1 if in view mode, 0 if in normal mode
  */
+int sortBy;
 
 int command(int vmode)
 {
@@ -170,6 +170,16 @@ static void open_directory(NODE *dir)
     node->info->parent = dir;
     node->info->level = dir->info->level+1;
   }
+  //insertion sort(MAKE CASE INSENSITIVE//strcasecmp)
+    //1. start with the first node (currentNode), and how long it goes(n)
+    //2. for(int i =0; i < n; i++){
+    //  a. futureNode = currentNode->next //keep track of the future
+    //  b. pastNode = currentNode->prev //keep track of the past
+    //  b. while(currentNode->data < pastNode->data){ pastNode=pastNode->prev } //find where we belong
+    //  c. insert_node(pastNode, currentNode) //go there
+    //  c.5 delete node
+    //  d. currentNode = futureNode //move on
+    //3. } //lmao
   free(d);
 }
 
