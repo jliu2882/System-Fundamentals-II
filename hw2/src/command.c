@@ -204,7 +204,7 @@ static void open_directory(NODE *dir)
     if(pastNode==NULL){
       break;
     }
-    if(pastNode!=NULL && pastNode != firstNode->prev && pastNode !=firstNode) { //check if pastNode exists
+    if(pastNode!=NULL && pastNode != firstNode->prev) { //check if pastNode exists
       while(compareNode(currentNode,pastNode)<0) { //find where we belong
         if(pastNode->prev!=NULL && pastNode != firstNode->prev){
           pastNode=pastNode->prev; //positive means past goes first
