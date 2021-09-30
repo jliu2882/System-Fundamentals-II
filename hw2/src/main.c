@@ -14,6 +14,10 @@
 #include <string.h>
 #include "browse.h"
 
+
+//TODO info.c: move small files into !humanreadable case and use the M as a catchall for large files
+//TODO info.c: compress the cases with conditional ? :
+
 int main(int argc, char *argv[]) //Could have made a usage function but it is what it is
 {
   int err; //Declares variable err
@@ -122,6 +126,7 @@ int main(int argc, char *argv[]) //Could have made a usage function but it is wh
         exit(EXIT_FAILURE); //Exits the program with an error
     }
   } //arguments parsed and we are in the right directory
+
   base = getcwd(NULL, MAXPATHLEN+1); //Set the base to the current directory(both inputs may need update??)
   if((cursor_node = get_info(base)) == NULL) { //Assign our cursor_node to the information node
     fprintf(stderr, "Can't stat %s\n", base); //If we ran into an error, we should let the user know
@@ -139,6 +144,7 @@ int main(int argc, char *argv[]) //Could have made a usage function but it is wh
     delete_node(cursor_node); //delete the next node, and move the other nodes up
   }
   if(cursor_node->info != NULL) free(cursor_node->info); //if the deleted node had info, we want to free it
+  if(cursor_node->data != NULL) free(cursor_node->data); //if the deleted node had info, we want to free it
   free(cursor_node);//free the first node
   free(base); //frees memory for base
 

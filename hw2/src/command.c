@@ -163,6 +163,9 @@ static void open_directory(NODE *dir)
     if(new->info->stat.st_dev == dir->info->stat.st_dev
        && new->info->stat.st_ino == dir->info->stat.st_ino) {
       free(new->info);
+      if(new->data){
+        free(new->data);
+      }
       free(new);
       continue;       /* Don't display '.' */
     }
