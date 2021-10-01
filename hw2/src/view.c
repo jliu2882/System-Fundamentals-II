@@ -43,17 +43,17 @@ void view_file(NODE *node)
 #ifdef NO_MAXLINE //if data is an array we don't need to free it
     if((read=getline(&buf, &len, f))<=0) break;
   ///  strncpy(new->data, buf, read);
-    new->data = strdup(buf);
+    new->data = strndup(buf,read);
 #else
     //deal with line being more than MAXLINE
-   // char buf2[MAXLINE+1]; //replace with infinite ??
+    char buf2[MAXLINE+1]; //skips the line if its longer than MAXLINE
     if(fgets(buf, MAXLINE, f) == NULL) break;
-   // if(strlen(buf)>=MAXLINE-1){
-    //  if(fgets(buf2, MAXLINE, f) == NULL) break;
-   //   while(strlen(buf2)>=MAXLINE-1){
-   //     if(fgets(buf2, MAXLINE, f) == NULL) break; //fix bug
-   //   }
-   // }
+    if(strlen(buf)>=MAXLINE-1){
+      if(fgets(buf2, MAXLINE, f) == NULL) break;
+      while(strlen(buf2)>=MAXLINE-1){
+        if(fgets(buf2, MAXLINE, f) == NULL) break; //fix bug
+      }
+    }
     strncpy(new->data, buf, MAXLINE);
  //   strncpy(new->data, buf, 256);
 #endif
