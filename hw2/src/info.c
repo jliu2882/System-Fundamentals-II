@@ -16,7 +16,7 @@
 
 #include "browse.h"
 
-int humanReadable;
+int humanReadable=0;
 
 static void cvt_info(FILE_INFO *info, char *buf, NODE *test);
 static char *cvt_mode(mode_t mode);
@@ -75,15 +75,20 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
 #ifdef NO_MAXLINE // I know this is bad code and I could optimize the runtime/general look but it runs man
   if(!humanReadable){ //normal mode
  //didnt work or as least didnt try to go further than this, ok nvm it worked but I did a wonky workaround
-    size_t needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
+    int needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
       cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
       info->stat.st_nlink, //The number of hard links
       pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
       info->stat.st_size, //The total size(in bytes unless specified otherwise)
       ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
       n) + 1;
-    test->data = malloc(needed);
-
+    if(needed<0){ //i don't know when this would ever happen since we're using less than 100
+      exit(EXIT_FAILURE);
+    }
+    if((test->data = calloc(1,needed)) == NULL){
+      feep("Out of memory"); //Lets the user know we ran out of space
+      exit(EXIT_FAILURE);
+    }
     sprintf(test->data, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
       cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
       info->stat.st_nlink, //The number of hard links
@@ -91,19 +96,23 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
       info->stat.st_size, //The total size(in bytes unless specified otherwise)
       ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
       n); //As well as our path
-  } else{ //human readable mode //hard-coded but I didn't want to deal with allocating memory for a char*
-
+  } else{//hard-coded but I didn't want to deal with allocating memory for a char* or do conditionals
     int size = info->stat.st_size; //get the size of the file
     if(size>pow(2,30)){ //large large files(treat as M lol)
-      size_t needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
+      int needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
         cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
         info->stat.st_nlink, //The number of hard links
         pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
         (long int)(info->stat.st_size/pow(10,6)), //The total size(in bytes unless specified otherwise)
         ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
         n) + 1;
-      test->data = malloc(needed);
-
+      if(needed<0){ //i don't know when this would ever happen since we're using less than 100
+        exit(EXIT_FAILURE);
+      }
+      if((test->data = calloc(1,needed)) == NULL){
+        feep("Out of memory"); //Lets the user know we ran out of space
+        exit(EXIT_FAILURE);
+      }
       sprintf(test->data, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
         cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
         info->stat.st_nlink, //The number of hard links
@@ -112,15 +121,20 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
         ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
         n); //As well as our path
     } else if(size>pow(2,20) && size<pow(2,30)){ //M
-      size_t needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
+      int needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
         cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
         info->stat.st_nlink, //The number of hard links
         pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
         (long int)(info->stat.st_size/pow(10,6)), //The total size(in bytes unless specified otherwise)
         ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
         n) + 1;
-      test->data = malloc(needed);
-
+      if(needed<0){ //i don't know when this would ever happen since we're using less than 100
+        exit(EXIT_FAILURE);
+      }
+      if((test->data = calloc(1,needed)) == NULL){
+        feep("Out of memory"); //Lets the user know we ran out of space
+        exit(EXIT_FAILURE);
+      }
       sprintf(test->data, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
         cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
         info->stat.st_nlink, //The number of hard links
@@ -129,15 +143,20 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
         ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
         n); //As well as our path
     } else if(size>pow(2,10) && size<pow(2,20)){ //K
-      size_t needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 7liK %.12s %s", //Write all this into buf
+      int needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 7liK %.12s %s", //Write all this into buf
         cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
         info->stat.st_nlink, //The number of hard links
         pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
         (long int)(info->stat.st_size/pow(10,3)), //The total size(in bytes unless specified otherwise)
         ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
         n) + 1;
-      test->data = malloc(needed);
-
+      if(needed<0){ //i don't know when this would ever happen since we're using less than 100
+        exit(EXIT_FAILURE);
+      }
+      if((test->data = calloc(1,needed)) == NULL){
+        feep("Out of memory"); //Lets the user know we ran out of space
+        exit(EXIT_FAILURE);
+      }
       sprintf(test->data, "%.10s %3ld %-8.8s % 7liK %.12s %s", //Write all this into buf
         cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
         info->stat.st_nlink, //The number of hard links
@@ -146,15 +165,20 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
         ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
         n); //As well as our path
     } else{ //Small files
-      size_t needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
+      int needed = snprintf(NULL, 0, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
         cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
         info->stat.st_nlink, //The number of hard links
         pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
         info->stat.st_size, //The total size(in bytes unless specified otherwise)
         ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
         n) + 1;
-      test->data = malloc(needed);
-
+      if(needed<0){ //i don't know when this would ever happen since we're using less than 100
+        exit(EXIT_FAILURE);
+      }
+      if((test->data = calloc(1,needed)) == NULL){
+        feep("Out of memory"); //Lets the user know we ran out of space
+        exit(EXIT_FAILURE);
+      }
       sprintf(test->data, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
         cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
         info->stat.st_nlink, //The number of hard links
@@ -165,16 +189,15 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
     }
   }
 #else //again i know its janky; especially since I'm doubling the already janky code
-    if(!humanReadable){ //normal mode
-        sprintf(buf, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
-          cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
-          info->stat.st_nlink, //The number of hard links
-          pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
-          info->stat.st_size, //The total size(in bytes unless specified otherwise)
-          ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
-          n); //As well as our path
-    } else{ //human readable mode //hard-coded but I didn't want to deal with allocating memory for a char*
-
+  if(!humanReadable){ //normal mode
+      sprintf(buf, "%.10s %3ld %-8.8s % 8li %.12s %s", //Write all this into buf
+        cvt_mode(info->stat.st_mode), //Include the file type and mode in a printable format
+        info->stat.st_nlink, //The number of hard links
+        pw != NULL ? pw->pw_name : "", //If the password is not NULL, include it
+        info->stat.st_size, //The total size(in bytes unless specified otherwise)
+        ctime(&info->stat.st_mtime)+4, //The time we last accessed the file without the day of the week
+        n); //As well as our path
+  } else{ //human readable mode //hard-coded but I didn't want to deal with allocating memory for a char*
     int size = info->stat.st_size; //get the size of the file
     if(size>pow(2,30)){ //large large files(treat as M lol)
       sprintf(buf, "%.10s %3ld %-8.8s % 7liM %.12s %s", //Write all this into buf
@@ -210,7 +233,6 @@ static void cvt_info(FILE_INFO *info, char *buf, NODE *test)
         n); //As well as our path
     }
   }
-
 #endif
 }
 

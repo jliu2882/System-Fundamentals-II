@@ -32,7 +32,7 @@ NODE *reinsert_node(NODE *old, NODE *new);
  * Process commands
  * vmode is 1 if in view mode, 0 if in normal mode
  */
-int sortBy;
+int sortBy=4;
 
 int command(int vmode)
 {

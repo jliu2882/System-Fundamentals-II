@@ -28,7 +28,6 @@ int main(int argc, char *argv[]) //Could have made a usage function but it is wh
   int chdirFlag = 0; //we don't want to be able to put two arguments for moving directories
   humanReadable = 0; //initialize to 0
   sortBy = 4; //sort by none by default
-  int c;
   while (1){
     int option_index = 0;
     static struct option long_options[] =
@@ -37,7 +36,7 @@ int main(int argc, char *argv[]) //Could have made a usage function but it is wh
         {"human-readable",  no_argument,       &humanReadable,  1},
         {NULL,              0,                 NULL,            0}
     };
-    c = getopt_long(argc, argv, "-:s:", long_options, &option_index); //get the next argument
+    int c = getopt_long(argc, argv, "-:s:", long_options, &option_index); //get the next argument
     if (c == -1) //if we are out of args
       break; //break the loop
     switch (c){ //we are to accept the behaviour of getopt_long, so these cases are enough
