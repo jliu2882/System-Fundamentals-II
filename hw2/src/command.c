@@ -166,8 +166,8 @@ static void open_directory(NODE *dir)
 //TODO:
 //This is only if we want to open the directory once
 
-      //feep("Directory is already opened"); //we already opened the directory
-      //return; //end the program
+      feep("Directory is already opened"); //we already opened the directory
+      return; //end the program
     }
   }
 
