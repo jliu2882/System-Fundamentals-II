@@ -36,6 +36,18 @@ int sortBy=4;
 
 int command(int vmode)
 {
+
+//TODO
+//Catch cases for arrow keys and delete button AKA "escape codes" that are multi characters
+//dont' want to implement this until I know for sure to ignore arrow-key
+  //char input[MAX_STRING_SIZE] = {0}; //or calloc idk; just initialize to 0
+  //fgets(input, sizeof(input), stdin); //get the input(which is just 1 char unless we do escape codes)
+  //ifinput[1] is not null
+  //  then continue/break since we don't want to read
+  //now we can switch case on input[0]
+  //reinitialize input to be all 0, so we don't retain bad data
+
+
   int c; //creates a int c
   switch(c = getch()) { //gets an input and reads what the user is looking for
   case 'n': //n:  Move the cursor to the next line (if any).
@@ -147,6 +159,18 @@ static void previous_screen()
 
 static void open_directory(NODE *dir)
 {
+
+  if(dir->next!=NULL){ //if there is a next node
+    if(dir->info->level!=dir->next->info->level){ //if the nodes are on the same level, we haven't opened it
+
+//TODO:
+//This is only if we want to open the directory once
+
+      //feep("Directory is already opened"); //we already opened the directory
+      //return; //end the program
+    }
+  }
+
   NODE *node, *new;
   DIR *d;
   struct dirent *dp;
