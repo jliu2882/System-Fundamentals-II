@@ -38,15 +38,13 @@ int command(int vmode)
 {
 
 //TODO
-//Catch cases for arrow keys and delete button AKA "escape codes" that are multi characters
-//dont' want to implement this until I know for sure to ignore arrow-key
+//Catch cases for arrow keys AKA "escape codes" that are multi characters; "ignore this fact" -Professor Stark
   //char input[MAX_STRING_SIZE] = {0}; //or calloc idk; just initialize to 0
   //fgets(input, sizeof(input), stdin); //get the input(which is just 1 char unless we do escape codes)
   //ifinput[1] is not null
   //  then continue/break since we don't want to read
   //now we can switch case on input[0]
   //reinitialize input to be all 0, so we don't retain bad data
-
 
   int c; //creates a int c
   switch(c = getch()) { //gets an input and reads what the user is looking for
