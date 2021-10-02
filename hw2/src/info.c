@@ -50,11 +50,7 @@ NODE *get_info(char *path)
     feep("Can't stat file"); //If we ran into any error, we want to let the user know
     free(info); //Free the space we allocated for the info
     free(node); //Free the space we allocated for the node
-      #ifdef NO_MAXLINE //if data is an array we don't need to free it
-      if(new->data){
-        free(new->data);
-      }
-      #endif
+    //don't free data since we never allocated space for it yet
     return(NULL); //Return an error if we couldn't get anything about our path
   }
   cvt_info(info, node->data, node); //Store the data from info into our node
