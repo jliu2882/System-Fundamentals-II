@@ -10,14 +10,15 @@
 #include "debug.h"
 
 //TODO
-//Implement sf_malloc, sf_free, sf_realloc, and then write 5 Criterion tests
+//BUG FIX
+//REALLOC
+//CRITERION
 
 //OOGA BOOGA TODO
 //Check for places whjere I asuume iunitial value of 0
-//create  afunction to tget footer
-//Helpful functions in stutil can be found in sfmm.h
+//mega bug gix smh
 
-//Static variables
+//Static variablesa
 static size_t minBlockSize = 8*sizeof(sf_header); //Record minimum block size here
 static int initialized = 0; //Keep a record of if we initialized memory yet
 static sf_block *prologue; //Keep track of the prologue block; could optimize by pointing to next block
@@ -29,18 +30,20 @@ static size_t sizeClass[NUM_FREE_LISTS]; //Keep track of the size classes since 
 static size_t roundUp(size_t size, size_t multiple); //Round the size up to the nearest block size
 static void *getFreeBlock(size_t size); //Find a free block, allocate it, and return a pointer to the payload
 static int initializeMemory(); //Initialize the free list heads, prologue and epilogue
-static sf_block *addPointer(sf_block *pp, int size); //Cast the pointer to void* to add by byte and cast back to sf_block*
+static sf_block *addPointer(sf_block *pp, size_t size); //Cast the pointer to void* to add by byte and cast back to sf_block*
 static void setHeader(sf_block *pp, size_t header); //Set the header of a block and if it's a free block, set the footer as well
 static sf_block *getNextBlock(sf_block *pp); //Get the next block, which can allow access to prev_footer
 static int getSizeOfBlock(sf_block *pp); //Get the size of a given sf_block
 static void placeBlock(sf_block *pp); //Insert into proper free list, assumes block is coalesced and everything is set
-static void setEpilogue(); //Set the epilogue for the current sf_mem_end()
+static void setEpilogue(size_t prev_bit); //Set the epilogue for the current sf_mem_end() and set the prev bit
+static sf_block *subtractPointer(sf_block *pp, size_t size); //Cast the pointer to void* to subtract by byte and cast back to sf_block*
 static int findFreeListIndex(size_t size); //Find the index of the smallest free list that holds size class size
 static int requestMemory(size_t size); //Request more memory coalescing if appropiate(Wrapper for sf_mem_grow)
 static void freeBlock(sf_block *pp); //Free the block by erasing any corresponding allocated bits and coalesce if possible
 static sf_block *coalesceBlock(sf_block *pp); //Coalesce the block with adjacent free blocks, assumes initial block is free
 static sf_block *getPreviousBlock(sf_block *pp); //Get the previous block, assumes that the block is free
 static void removeFromFreeList(sf_block *pp); //Remove a block from a free list
+static sf_block *findBlockInList(sf_block *sentinel, size_t size); //Find a block of the right size; NULL if none exist
 static void splitBlock(sf_block *pp, size_t newSize); //Split the block if possible while keeping pp a valid block
 
     //next up
@@ -57,6 +60,7 @@ void *sf_malloc(size_t size) { //Note that free blocks need at least 32 bytes wh
 
 void sf_free(void *pp) {
     verifyPointer(pp); //Verify the pointer and stop the program if the pointer is invalid
+    pp-=16; //We want to go from the payload to the start of sf_block
     freeBlock(pp); //Free the block and coalesce if appropiate
     return; //not needed so delete later :))
 }
@@ -68,6 +72,7 @@ void *sf_realloc(void *pp, size_t rsize) {
         return 0; //Return 0 to let the program know we didn't find any errors
     }
     verifyPointer(pp); //Verify the pointer and stop the program if the pointer is invalid
+    //fix pp
     //if(rsize>size of pp){ //!Calculate size of pp first
         //if((newBlock=sf_malloc(rsize))==NULL) //Assign a newBlock of the proper size
             //return NULL; //sf_errno will be set if sf_malloc deems it appropiate
@@ -93,18 +98,21 @@ static void *getFreeBlock(size_t size){ //Find a free block, allocate it, and re
     if(initialized == 0) //If the memory is uninitialized, initialize it first then continue
         if(initializeMemory()) return NULL; //initializeMemory will set sf_errno if appropriate
     int i = findFreeListIndex(size); //Start at the first size class that is possibly valid
-    while(sf_free_list_heads[i].body.links.next == &sf_free_list_heads[i]){ //...prev is the same if it is properly circular
-        if(++i==NUM_FREE_LISTS){ //Move to the next size class and check if we WERE on the last list at index NUM_FREE_LIST-1
-            if(requestMemory(size)) return NULL; //requestMemory will return nonzero on failures and set sf_errno for us
-            i--; //Subtract i since we went past the max index
+    sf_block *foundBlock=NULL; //Uninitialized for now, but will store the proper block; use as a flag
+    while(!foundBlock){//go until we find the block
+    //} && sf_free_list_heads[i].body.links.next == &sf_free_list_heads[i]){ //...prev is the same if it is properly circular
+        foundBlock = findBlockInList(&sf_free_list_heads[i], size); //Find a block of proper size in the free list; NULL if none
+        if(++i>=NUM_FREE_LISTS){ //Move to the next size clas; for some reason doesn't work as intended but the fix fixed it
+            if(requestMemory(size)) return NULL; //requestMemory will set sf_errno for us; it will put a big enough block first
+            foundBlock = sf_free_list_heads[i-1].body.links.next; //Retrieve the block in the first position(!foundBlock=false)
             break; //Break the for loop so we don't increment i again
         } //We will always increment i, and we use pre-increment so we can compare with NUM_FREE_LIST vs NUM_FREE_LIST-1
     } //After the while loop, i is the index of a freelist with a big enough block for size
-    sf_block *freeBlock = sf_free_list_heads[i].body.links.next; //Get the pointer to the block from the free list
-    removeFromFreeList(freeBlock); //Remove the block from the free list it is in and set the prev bits of the next block
-    splitBlock(freeBlock, size); //Split the block we found to the proper size
-    setHeader(freeBlock, getSizeOfBlock(freeBlock)|THIS_BLOCK_ALLOCATED); //Set the block to the allocated
-    return freeBlock->body.payload; //Return a pointer to the payload of the free block
+    if(foundBlock==NULL) return NULL; //This shouldn't happen but it's here for
+    removeFromFreeList(foundBlock); //Remove the block from the free list it is in and set the prev bits of the next block
+    setHeader(foundBlock, foundBlock->header|THIS_BLOCK_ALLOCATED); //Set the block to the allocated
+    splitBlock(foundBlock, size); //Split the block we found to the proper size
+    return foundBlock->body.payload; //Return a pointer to the payload of the free block
 } //Note that this function returns either NULL or a pointer to the payload
 
 static int initializeMemory(){ //Initialize the free list heads, prologue and epilogue
@@ -129,18 +137,17 @@ static int initializeMemory(){ //Initialize the free list heads, prologue and ep
     sf_block *block = addPointer(prologue,minBlockSize); //The first block is a block size after our prologue
     setHeader(block, blockSize); //Set the header/footer of the block and since this is free, the footer as well
     placeBlock(block); //Place the block in its proper free list
-    setEpilogue(); //Set the epilogue
+    setEpilogue(0); //Set the epilogue and know that the initial prev should be 0
     return 0; //Successfully initialized memory without an error
 } //Do all the initialization here and then some just in case :)
 
-static sf_block *addPointer(sf_block *pp, int size){ //Cast the pointer to void* to add by byte and cast back to sf_block*
+static sf_block *addPointer(sf_block *pp, size_t size){ //Cast the pointer to void* to add by byte and cast back to sf_block*
     void *ppClone = (void *)pp; //Cast pp to a void* for easier math
     ppClone+=size; //Add the size to the end
     return ((sf_block *)ppClone); //Cast back to sf_block* for easier use
 } //We use int since we don't expect large additions and this allows for subtraction
 
 static void setHeader(sf_block *pp, size_t header){ //Set the header of a block and if it's a free block, set the footer as well
-    //read the free bit and if its free then set footer as well
     pp->header=header; //Set the header of the block
     if(!(pp->header&THIS_BLOCK_ALLOCATED)){ //If the new header of the block is free, we want to set a footer as well
         pp=getNextBlock(pp); //Get the next block, which can allow access to prev_footer
@@ -157,7 +164,7 @@ static int getSizeOfBlock(sf_block *pp){ //Get the size of a given sf_block
 } //Note that the other 4 unused bits will be 0 so there's no need to mask them out
 
 static void placeBlock(sf_block *pp){ //Insert into proper free list, assumes block is coalesced and everything is set
-    int size = getSizeOfBlock(pp); //Get the size of the block we are trying to insert
+    size_t size = getSizeOfBlock(pp); //Get the size of the block we are trying to insert
     sf_block *freeList = &sf_free_list_heads[findFreeListIndex(size)]; //Find the proper sentinel node
     freeList->body.links.next->body.links.prev=pp; //The current first block should point back to the new
     pp->body.links.next=freeList->body.links.next; //Our block should point to the old first block
@@ -165,90 +172,133 @@ static void placeBlock(sf_block *pp){ //Insert into proper free list, assumes bl
     pp->body.links.prev=freeList; //We also want it to point back to the sentinel node
 } //Insert a block of memory into the proper free list; Note that we shouldn't have to change the header/footer
 
-static void setEpilogue(){ //Set the epilogue for the current sf_mem_end()
+static void setEpilogue(size_t prev_bit){ //Set the epilogue for the current sf_mem_end() and set the prev bit
+    if(prev_bit) prev_bit = PREV_BLOCK_ALLOCATED; //On any input, we want to set the previous bit
     void *end = sf_mem_end(); //Get the ending address of the heap using void* so we can add by bytes to the address
-    epilogue=addPointer(end,-(int)(sizeof(sf_header)+sizeof(sf_footer))); //Move back the bytes for header/footer
-    setHeader(epilogue,THIS_BLOCK_ALLOCATED); //Set the epilogue to the allocated bit; previous depends on the input
+    epilogue=subtractPointer(end,(sizeof(sf_header)+sizeof(sf_footer))); //Move back the bytes for header/footer
+    setHeader(epilogue,THIS_BLOCK_ALLOCATED+prev_bit); //Set the epilogue to the allocated bit; previous depends on the input
 } //Used for modularity but idk maybe it's too modular now
 
+static sf_block *subtractPointer(sf_block *pp, size_t size){ //Cast the pointer to void* to subtract by byte and cast back to sf_block*
+    void *ppClone = (void *)pp; //Cast pp to a void* for easier math
+    ppClone-=size; //Add the size to the end
+    return ((sf_block *)ppClone); //Cast back to sf_block* for easier use
+} //We use int since we don't expect large additions and this allows for subtraction
+
 static int findFreeListIndex(size_t size){ //Find the index of the smallest free list that holds size class size
+    size=(int)(size/64); //We want to find the size in blocks
     for(int i = 0; i < NUM_FREE_LISTS; i++) //Loop through the free lists to find the first list it belongs in
         if(size<=sizeClass[i]) return i; //The size can fit within the maximum of size class i
     return NUM_FREE_LISTS-1; //If it wasn't less than a size class it must be in the last free list which emcompasses infinity
 } //Note that sizeClass[NUM_FREE_LISTS-1] isn't accurate for the max size, but the final return value anticipates this
 
 static int requestMemory(size_t size){ //Request more memory coalescing if appropiate(Wrapper for sf_mem_grow)
+    int index = findFreeListIndex(size); //Start at the first size class that is possibly valid
+    while(index<NUM_FREE_LISTS){ //Check every list for a block
+        if(findBlockInList(&sf_free_list_heads[index], size)) return 0; //Exit the function if we got a big enough block
+        index++; //Move to the next list
+    } //For some reason, it isn't checked so I have this and I'm too lazy to refactor now
     int pagesNeeded = (size/PAGE_SZ)+(size%PAGE_SZ!=0); //Integer division rounds down so add a page if it wasn't a perfect fit
     for(int i = 0; i < pagesNeeded; i++){ //Request pages of memory until we have enough memory for a block of size
         if(sf_mem_grow()==NULL) return 1; //Add a page of memory; Note that sf_errno will be set on errors
-        int newMemory = PAGE_SZ - sizeof(sf_header); //We need to give space for the new epilogue, but otherwise we're good
-        newMemory+=(PREV_BLOCK_ALLOCATED&epilogue->header); //We want to keep prev_alloc and we'll erase alloc later
+        size_t newMemory = PAGE_SZ;// - sizeof(sf_header); //We need to give space for the new epilogue, but otherwise we're good
+        newMemory|=(getSizeOfBlock(epilogue)|(PREV_BLOCK_ALLOCATED&epilogue->header)); //We want to keep prev_alloc
+        newMemory&=(~THIS_BLOCK_ALLOCATED); // Erase alloc bit now
         sf_block *newBlock = epilogue; //Save the address of the epilogue so we can move epilogue
         setHeader(newBlock,newMemory); //Set the header of the new block
-        setEpilogue(); //Set the epilogue(vs epilogue=getNextBlock(epilogue); setHeader(epilogue,THIS_BLOCK_ALLOCATED);)
+        setEpilogue(THIS_BLOCK_ALLOCATED&epilogue->header); //Set the epilogue(vs epilogue=getNextBlock(epilogue); setHeader(epilogue,THIS_BLOCK_ALLOCATED);)
         freeBlock(newBlock); //Erase the bit in alloc and the prev_alloc of the next block and coalesce with adjacent blocks
-    } //Requested the pages of memory successfully; Note that for ^^ the next block is allocated already but we will still check
+        int index = findFreeListIndex(size); //Start at the first size class that is possibly valid
+        if(findBlockInList(&sf_free_list_heads[index], size)) break; //Break the loop if we coalesced and got a big enough block
+    } //Requested the pages of memory successfully; We will create enough pages until we find a valid block size
     return 0; //Successfully request more memory without any errors
 } //Created a wrapper around sf_mem_grow which asks for more memory and does the needed changes
 
 static void freeBlock(sf_block *pp){ //Free the block by erasing any corresponding allocated bits and coalesce if possible
     pp->header&=~THIS_BLOCK_ALLOCATED; //Unallocate the alloc bit of the current block
-    getNextBlock(pp)->prev_footer&=~PREV_BLOCK_ALLOCATED; //Unallocate the prev_alloc bit of the next block
+    setHeader(pp,pp->header); //Set the footer of the our block
+    setHeader(getNextBlock(pp),(getNextBlock(pp)->header)&(~PREV_BLOCK_ALLOCATED)); //Unallocate the prev_alloc bit of the next block
+    placeBlock(pp); //TEMPTODOPlace the block in it's proper free list
     coalesceBlock(pp); //Coalesce the block if possible but we don't need to recognize it's return value
 } //This function frees the block and places it in the free list
 
 static sf_block *coalesceBlock(sf_block *pp){ //Coalesce the block with adjacent free blocks, assumes initial block is free
     while(!(getNextBlock(pp)->header&THIS_BLOCK_ALLOCATED)){ //Check if the next block is free;  note that pp doesn't change here
-        size_t totalSize = getSizeOfBlock(pp)+getSizeOfBlock(getNextBlock(pp)); //Add the two sizes together
+        sf_block *nextBlock = getNextBlock(pp); //Save the next block since we will update the value in pp
+        size_t totalSize = getSizeOfBlock(pp)+getSizeOfBlock(nextBlock); //Add the two sizes together
         setHeader(pp,totalSize+(pp->header&PREV_BLOCK_ALLOCATED)); //Set the header with the previous of the earlier block
+        removeFromFreeList(nextBlock); //Remove the block from free list it is in and set the prev bits of the next block
     } //There are no more free blocks after pp; Note that the latter header can be ignored because it's part of the payload now
     while(!(pp->header&PREV_BLOCK_ALLOCATED)){ //Check if the previous block is free; note that pp goes to the earlier address
         sf_block *prev = getPreviousBlock(pp); //Create a reference for the previous block
         size_t totalSize = getSizeOfBlock(prev)+getSizeOfBlock(pp); //Add the two sizes together
         setHeader(prev,totalSize+(prev->header&PREV_BLOCK_ALLOCATED)); //Set the header with the previous of the earlier block
+        removeFromFreeList(pp); //Remove the block from free list it is in and set the prev bits of the next block
         pp = prev; //Set the new addres of pp to the be the earlier address
     } //There are no more adjacent free blocks; //Note that we didn't use pp->prev_footer because it might be allocated
-    placeBlock(pp); //Place the block in it's proper free list
     return pp; //The block is freed and shouldn't be touched but in case of emergency idk too lazy to change tbh
 } //Note that the beginning and end of the heap are allocated(prologue/epilogue)
 
 static sf_block *getPreviousBlock(sf_block *pp){ //Get the previous block, assumes that the block is free
-    return addPointer(pp,-((pp->prev_footer) & ~THIS_BLOCK_ALLOCATED & ~PREV_BLOCK_ALLOCATED)); //Get the previous block
+    return subtractPointer(pp,((pp->prev_footer) & ~THIS_BLOCK_ALLOCATED & ~PREV_BLOCK_ALLOCATED)); //Get the previous block
 } //This is here to increase readability of the code
 
 static void removeFromFreeList(sf_block *pp){ //Remove a block from a free list
     pp->body.links.prev->body.links.next=pp->body.links.next; //The previous block should jump to the next
     pp->body.links.next->body.links.prev=pp->body.links.prev; //The next block should back to the previous
-    setHeader(getNextBlock(pp),getNextBlock(pp)->header|THIS_BLOCK_ALLOCATED); //Set the prev alloc for the next block
-} //Note that the body of pp is now garbage with the previous pointers
+    //setHeader(getNextBlock(pp),getNextBlock(pp)->header|PREV_BLOCK_ALLOCATED); //Set the prev alloc for the next block
+    setHeader(pp,pp->header|THIS_BLOCK_ALLOCATED); //Set the alloc for the block
+} //Note that the payload of pp is essentially garbage with the previous pointers
+
+static sf_block *findBlockInList(sf_block *sentinel, size_t size){ //Find a block of the right size; NULL if none exist
+    sf_block *next = sentinel->body.links.next; //We start at the first node and go until we reach the sentinel
+    while(next!=sentinel){ //Loop until we reach the sentinel
+        if(getSizeOfBlock(next)>=size) return next; //We found a suitable block
+        next = next->body.links.next; //Go to the next node
+    } //We are using pointer for both so we can just compare pointers
+    return NULL; //We reached the end and couldn't find a suitable block
+} //Considered making this recursive but decided it was too much effort to bug fix
 
 static void splitBlock(sf_block *pp, size_t newSize){ //Split the block if possible while keeping pp a valid block
-    int oldSize = getSizeOfBlock(pp); //Save the old size for future reference
-    if(oldSize-newSize<64) return; //We don't want to split if it will cause a splinter; catches newSize>oldSize
-    size_t oldBits = pp->header&(THIS_BLOCK_ALLOCATED+PREV_BLOCK_ALLOCATED); //Save the old alloc/prev_alloc bits
-    size_t oldBlockHeader = newSize+oldBits; //Add the old alloc/prev_alloc bits to the new size
-    setHeader(pp,oldBlockHeader); //Keep the old bits while updating size
+    size_t oldSize = getSizeOfBlock(pp); //Save the old size for future reference
+    if((((int)oldSize)-newSize)<64) return; //We don't want to split if it will cause a splinter; catches newSize>oldSize
     size_t newBits = (pp->header&THIS_BLOCK_ALLOCATED)?PREV_BLOCK_ALLOCATED:0; //This block's free, but the prev depends on pp
     size_t newBlockHeader = oldSize-newSize+newBits; //The new size of the old block is the remaining blocks
-    sf_block *newBlock = getNextBlock(pp); //Keep a variable for the new block
+    sf_block *newBlock = addPointer(pp,newSize); //Keep a variable for the new block; getNextBlock doesn't work without size
     setHeader(newBlock,newBlockHeader); //Set the header of the new block to the remaining size and the proper bits
+    setHeader(getNextBlock(newBlock),getNextBlock(newBlock)->header&(~PREV_BLOCK_ALLOCATED)); //The next block is after free
     placeBlock(newBlock); //Place the newly split free block into the proper size class
-    printf("%li\n",oldBits);
-    printf("%li\n",newBits);
-    exit(0);
-} //Note that pp is still a valid block, just with a new size
+    size_t oldBits = pp->header&(THIS_BLOCK_ALLOCATED+PREV_BLOCK_ALLOCATED); //Save the old alloc/prev_alloc bits
+    size_t oldBlockHeader = newSize+oldBits; //Add the old alloc/prev_alloc bits to the new size
+    setHeader(pp,oldBlockHeader); //Keep the old bits while updating sizedebug("~~~~~\n\n\n\n\n=");
+} //We did new first because old would change the values for new or something idk
 
 
 static void verifyPointer(void* pp){ //Abort the program if the pointer is invalid
+//debug("Verifying pointer...\n");
     if(pp==NULL) //If the pointer is NULL, it is invalid
         abort(); //The pointer is invalid, so we should abort the program
-    if((uintptr_t)pp%minBlockSize!=0)//If the pointer is not 64-byte aligned, it is invalid
-    //Check actually
+//debug("The pointer is not null!\n");
+    //Move from payload to the block
+    pp-=16; //We want to go from the payload to the start of sf_block
+    sf_block *pointer = (sf_block *)pp; //Cast pp to a block and store it in a variable
+//debug("Sucessfully cast to sf_block!\n");
+    if(getSizeOfBlock(pointer)%minBlockSize!=0)//If the pointer is not 64-byte aligned, it is invalid
         abort(); //The pointer is invalid, so we should abort the program
-    //If the pointer is NULL
-    //If the pointer is not 64 byte aligned
+//debug("The pointer is aligned!\n");
     //If the header is before the start of heap, or the footer is after the end of heap
-    //If the allocated bit is 0
-    //If the prev_alloc field is 0, but the previous block's alloc field is not 0
-    return; //We successfully validated the pointer; This implementation was nicer on the eyes
+//Does this mean that any pointer before the block immediately after prologue, including prologue itself,
+//and any pointer after the epilogue block including the epilogue block, are considered invalid? yes
+//debug("not checking position in heap yet!\n");
+    if(!pointer->header&THIS_BLOCK_ALLOCATED) //If the block is not allocated
+        abort(); //The pointer is invalid, so we should abort the program
+//debug("The block is allocated!\n");
+    if(!(pointer->header&PREV_BLOCK_ALLOCATED)&&getPreviousBlock(pointer)->header&THIS_BLOCK_ALLOCATED) //If previous block disagrees
+    //CHECK THIS ACTUALLY
+    //if point.prev=0 and prev.all=1 we error
+        abort(); //The pointer is invalid, so we should abort the program
+//debug("The block claims the previous block is free and it was!\n");
+
+//debug("Verified pointer!\n");
+    return; //We successfully validated the pointer; This implementation was nicer on the eyes than nested if statements
 } //The pointer is valid
