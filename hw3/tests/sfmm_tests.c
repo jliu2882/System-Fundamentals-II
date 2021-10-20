@@ -190,3 +190,23 @@ Test(sfmm_basecode_suite, realloc_smaller_block_free_block, .timeout = TEST_TIME
 
 //Test(sfmm_student_suite, student_test_1, .timeout = TEST_TIMEOUT) {
 //}
+
+//Test(sfmm_student_suite, student_test_1, .timeout = TEST_TIMEOUT) {
+//
+//}
+
+//Test(sfmm_student_suite, student_test_2, .timeout = TEST_TIMEOUT) {
+//
+//}
+
+//Test(sfmm_student_suite, student_test_3, .timeout = TEST_TIMEOUT) {
+//
+//}
+
+//Test(sfmm_student_suite, student_test_4, .timeout = TEST_TIMEOUT) {
+//
+//}
+
+//Test(sfmm_student_suite, student_test_5, .timeout = TEST_TIMEOUT) {
+//
+//}
