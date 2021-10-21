@@ -272,7 +272,7 @@ static void splitBlock(sf_block *pp, size_t newSize){ //Split the block if possi
 static void verifyPointer(void *pp){ //Abort the program if the pointer is invalid
     if(pp==NULL) //If the pointer is NULL, it is invalid
         abort(); //The pointer is invalid, so we should abort the program
-    if(((size_t)pp)%minBlockSize!=0)//If the pointer to the payload is not 64-byte aligned, it is invalid
+    if(((size_t)pp)%minBlockSize!=0)//If the pointer to the payload is not 64-byte aligned, it is invalid(size in bytes)
         abort(); //The pointer is invalid, so we should abort the program
     pp=(char*)pp-16; //We want to go from the payload to the start of sf_block; cast to char* for portability
     sf_block *pointer = (sf_block *)pp; //Cast pp to a block and store it in a variable
