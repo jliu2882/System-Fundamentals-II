@@ -173,7 +173,7 @@ static int findFreeListIndex(size_t size){ //Find the index of the smallest free
 static int requestMemory(size_t size){ //Request more memory coalescing if appropiate(Wrapper for sf_mem_grow)
     int index = findFreeListIndex(size); //Start at the first size class that is possibly valid
     while(index<NUM_FREE_LISTS){ //Check every list for a block
-        if(findBlockInList(&sf_free_list_heads[index], size)) return 0; //Exit the function if we got a big enough block
+        if(findBlockInList(&sf_free_list_heads[index], size)) return 0; //Stop the function if we got a big enough block
         index++; //Move to the next list
     } //For some reason, it isn't checked so I have this and I'm too lazy to refactor now
     int pagesNeeded = (size/PAGE_SZ)+(size%PAGE_SZ!=0); //Integer division rounds down so add a page if it wasn't a perfect fit
@@ -195,7 +195,7 @@ static void freeBlock(sf_block *pp){ //Free the block by erasing any correspondi
     pp->header&=~THIS_BLOCK_ALLOCATED; //Unallocate the alloc bit of the current block
     setHeader(pp,pp->header); //Set the footer of the our block
     setHeader(getNextBlock(pp),(getNextBlock(pp)->header)&(~PREV_BLOCK_ALLOCATED)); //Unallocate the prev_alloc bit of the next block
-    placeBlock(pp); //TEMPTODOPlace the block in it's proper free list
+    placeBlock(pp); //Place the block in it's proper free list
     coalesceBlock(pp); //Coalesce the block if possible but we don't need to recognize it's return value
 } //This function frees the block and places it in the free list
 static sf_block *coalesceBlock(sf_block *pp){ //Coalesce the block with adjacent free blocks, assumes initial block is free
