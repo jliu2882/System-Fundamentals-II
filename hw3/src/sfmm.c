@@ -25,7 +25,7 @@ static int initializeMemory(); //Initialize the free list heads, prologue and ep
 static sf_block *addPointer(sf_block *pp, size_t size); //Cast the pointer to char* to add by byte and cast back to sf_block*
 static void setHeader(sf_block *pp, size_t header); //Set the header of a block and if it's a free block, set the footer as well
 static sf_block *getNextBlock(sf_block *pp); //Get the next block, which can allow access to prev_footer
-static int getSizeOfBlock(sf_block *pp); //Get the size of a given sf_block
+static size_t getSizeOfBlock(sf_block *pp); //Get the size of a given sf_block
 static void placeBlock(sf_block *pp); //Insert into proper free list, assumes block is coalesced and everything is set
 static void setEpilogue(size_t prev_bit); //Set the epilogue for the current sf_mem_end() and set the prev bit
 static sf_block *subtractPointer(sf_block *pp, size_t size); //Cast the pointer to char* to subtract by byte and cast back to sf_block*
@@ -38,7 +38,7 @@ static void removeFromFreeList(sf_block *pp); //Remove a block from a free list
 static sf_block *findBlockInList(sf_block *sentinel, size_t size); //Find a block of the right size; NULL if none exist
 static void splitBlock(sf_block *pp, size_t newSize); //Split the block if possible while keeping pp a valid block
 static void verifyPointer(void *pp); //Abort the program if the pointer is invalid
-static int outsideHeap(void *pp); //Determine if the header is before the start of heap, or the footer is after the end of heap
+static int outsideHeap(sf_block *pp); //Determine if the header is before the start of heap, or the footer is after the end of heap
 
 
 //Main functions
@@ -60,15 +60,16 @@ void *sf_realloc(void *pp, size_t rsize) {
     } //cool cool cool cool
     verifyPointer(pp); //Verify the pointer and stop the program if the pointer is invalid
     pp=(char*)pp-16; //We want to go from the payload to the start of sf_block; cast to char* for portability
+    rsize+=sizeof(sf_header); //The new block needs a header
     if(rsize>getSizeOfBlock(pp)){ //If we are reallocating to a larger block, we want to get a new space
         sf_block *newBlock = sf_malloc(rsize); //Assign a new block with size rsize
         if(newBlock==NULL) return NULL; //sf_errno will be set if sf_malloc deems it appropiate
-        memcpy(newBlock->body.payload, ((sf_block *)pp)->body.payload, getSizeOfBlock(pp));
-//tood CHECK VALEUS AND WHAT NTO
+        size_t payloadSize = getSizeOfBlock(pp)-sizeof(sf_header); //The paylod is the size minus the header(allocated=no footer)
+        memcpy(newBlock->body.payload, ((sf_block *)pp)->body.payload, payloadSize); //Copy the payload to the new block
         sf_free(((sf_block *)pp)->body.payload); //Free the old block by sending the payload
         return newBlock; //Return the newly allocated block
     } else{ //Technically we should have a case of equal size but it works since split to same size doesn't break
-        splitBlock(pp,rsize+sizeof(sf_header)); //The payload is the same but the way we read it is different
+        splitBlock(pp,rsize); //The payload is the same but the way we read it is different
         return ((sf_block *)pp)->body.payload; //The payload is still the same just cut off if applicable
     } //Note that if we do split, the split block will have garbage values; Note that we need room for the header as well
     return NULL; //There is no scenario where this should be called, I think
@@ -141,7 +142,7 @@ static void setHeader(sf_block *pp, size_t header){ //Set the header of a block 
 static sf_block *getNextBlock(sf_block *pp){ //Get the next block, which can allow access to prev_footer
     return addPointer(pp,getSizeOfBlock(pp)); //Add the size of the block to reach the footer
 } //This is here to increase readability of the code
-static int getSizeOfBlock(sf_block *pp){ //Get the size of a given sf_block
+static size_t getSizeOfBlock(sf_block *pp){ //Get the size of a given sf_block
     return pp->header & ~THIS_BLOCK_ALLOCATED & ~PREV_BLOCK_ALLOCATED; //Mask out the 2 bits set aside for other uses
 } //Note that the other 4 unused bits will be 0 so there's no need to mask them out
 static void placeBlock(sf_block *pp){ //Insert into proper free list, assumes block is coalesced and everything is set
@@ -251,10 +252,10 @@ static void splitBlock(sf_block *pp, size_t newSize){ //Split the block if possi
 static void verifyPointer(void *pp){ //Abort the program if the pointer is invalid
     if(pp==NULL) //If the pointer is NULL, it is invalid
         abort(); //The pointer is invalid, so we should abort the program
+    if(((size_t)pp)%minBlockSize!=0)//If the pointer to the payload is not 64-byte aligned, it is invalid
+        abort(); //The pointer is invalid, so we should abort the program
     pp=(char*)pp-16; //We want to go from the payload to the start of sf_block; cast to char* for portability
     sf_block *pointer = (sf_block *)pp; //Cast pp to a block and store it in a variable
-    if(getSizeOfBlock(pointer)%minBlockSize!=0)//If the pointer is not 64-byte aligned, it is invalid
-        abort(); //The pointer is invalid, so we should abort the program
     if(outsideHeap(pp)) //If the header is before the start of heap, or the footer is after the end of heap
         abort(); //The pointer is invalid, so we should abort the program
     if(!pointer->header&THIS_BLOCK_ALLOCATED) //If the block is not allocated
@@ -264,16 +265,10 @@ static void verifyPointer(void *pp){ //Abort the program if the pointer is inval
         abort(); //The pointer is invalid, so we should abort the program
     return; //We successfully validated the pointer; This implementation was nicer on the eyes than nested if statements
 } //The pointer is valid
-static int outsideHeap(void *pp){ //Determine if the header is before the start of heap, or the footer is after the end of heap
-
-//return 0 on inside heap, return 1 on outside heap
-    //if(pp>=epilogue)
-        //epilogue afte rlast block
-        //it start later than epilogue meaning the header goes over heap
-    //if(pp<nextBLock(porogloeu))
-        //it start earlier than here must mean its before first block
-
-//The header of the block is before the start of the first block of the heap, or the footer
-//of the block is after the end of the last block in the heap.
+static int outsideHeap(sf_block *pp){ //Determine if the header is before the start of heap, or the footer is after the end of heap
+    if(&(pp->header)<&(getNextBlock(prologue)->header)) //If the block's header is before the header of the first block
+        return 1; //Note that the first block is allowed, just not anything before it(including the prologue)
+    if(&(pp->header)>=(&epilogue->header)) //If the block starts on the epilogue or later it must go on pas it
+        return 1; //Note that if it was before this, it must also be aligned so it doesn't extend past epilogue
     return 0; //We have determined it wasn't outside the heap, so it must inside
-} //Basically check if block is within heap
+} //Basically check if block is within heap; return (....)?1:0 but no thanks
