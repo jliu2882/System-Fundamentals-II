@@ -1,14 +1,23 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 #include "sfmm.h"
+#include "debug.h"
 
 int main(int argc, char const *argv[]) {
-    double* ptr = sf_malloc(sizeof(double));
 
-    *ptr = 320320320e-320;
+    for(int i = 0; i < 100; i++){
+        char *x = sf_malloc(1);
+        char *y = sf_malloc(1);
+        if(i%3==0)
+            sf_free(x);
+        if(i%2==0)
+            sf_free(y);
+    }
 
-    printf("%f\n", *ptr);
 
-    sf_free(ptr);
+    sf_show_heap();
 
     return EXIT_SUCCESS;
 }

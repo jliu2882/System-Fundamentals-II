@@ -191,41 +191,62 @@ Test(sfmm_basecode_suite, realloc_smaller_block_free_block, .timeout = TEST_TIME
 //Test(sfmm_student_suite, student_test_1, .timeout = TEST_TIMEOUT) {
 //}
 
-//Test(sfmm_student_suite, student_test_1, .timeout = TEST_TIMEOUT) {
+Test(sfmm_student_suite, student_test_1, .timeout = TEST_TIMEOUT) {
 //
 	//
-//
-//}
+	//test realloc to same size and request memory when freeing first would give enough
+	/*
+	char * ptr1 = sf_malloc(50 * sizeof(double));
+	*(ptr1) = 'A';
+	char * ptr2 = sf_malloc(78 * sizeof(double));
+	*(ptr2) = 'A';
+	char * ptr3 = sf_malloc(1 * sizeof(double));
+	*(ptr3) = 'A';
+	ptr1 = sf_realloc(ptr1, 300);
+	ptr2 = sf_realloc(ptr2, 640);
+	sf_free(ptr1);
+	ptr2 = sf_realloc(ptr2, 300);
+	sf_free(ptr2);
+	char * ptr4 = sf_malloc(7048);
+	*(ptr4) = 'A';
+	char * ptr5 = sf_malloc(6000);
+	*(ptr5) = 'A';
+	char * ptr6 = sf_malloc(2168);
+	*(ptr6) = 'A';
+	ptr6 = sf_realloc(ptr6, 2000);
+	ptr6 = sf_realloc(ptr6, 2000);
+	char * ptr7 = sf_malloc(1000);
+	*(ptr7) = 'A';
+	char * ptr8 = sf_realloc(ptr7, 1048);
+	*(ptr8) = 'A';
+	*/
+	//
+}
 
-//Test(sfmm_student_suite, student_test_2, .timeout = TEST_TIMEOUT) {
-//
-	//
-//
-//}
+Test(sfmm_student_suite, student_test_2, .signal=SIGABRT, .timeout = TEST_TIMEOUT) {
+	void *x = sf_malloc(1); //Malloc a block
+	sf_free(x); //Free the block once
+	sf_free(x); //Free it again; should abort due to invalid pointer
+}
 
 //Test(sfmm_student_suite, student_test_3, .timeout = TEST_TIMEOUT) {
 //
 	//
+	//test values in payload
 //
 //}
 
 //Test(sfmm_student_suite, student_test_4, .timeout = TEST_TIMEOUT) {
 //
 	//
+	//test allocating whole memory
 //
 //}
 
 //Test(sfmm_student_suite, student_test_5, .timeout = TEST_TIMEOUT) {
 //
 	//
+	//test spamming free list with blocks(must have allocated in between tho)
 //
 //}
 
-
-//tood
-//write criterion tests(examples in downloads folder)
-//test folder in downloads
-    //test unverified pointer
-        //test abort
-            //There is a ".signal = SIGABRT" parameter that can be passed to a Criterion test.  See the Criterion docs.
-    //test payload

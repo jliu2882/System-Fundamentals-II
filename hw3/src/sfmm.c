@@ -69,7 +69,7 @@ void *sf_realloc(void *pp, size_t rsize) {
         size_t payloadSize = getSizeOfBlock(pp)-sizeof(sf_header); //The paylod is the size minus the header(allocated=no footer)
         memcpy(newBlock->body.payload, ((sf_block *)pp)->body.payload, payloadSize); //Copy the payload to the new block
         sf_free(((sf_block *)pp)->body.payload); //Free the old block by sending the payload
-        return newBlock->body.payload; //Return the newly allocated block
+        return newBlock; //Return the newly allocated block
     } else{ //Technically we should have a case of equal size but it works since split to same size doesn't break
         splitBlock(pp,rsize); //The payload is the same but the way we read it is different
         return ((sf_block *)pp)->body.payload; //The payload is still the same just cut off if applicable
@@ -102,6 +102,8 @@ static void *getFreeBlock(size_t size){ //Find a free block, allocate it, and re
     if(foundBlock==NULL) return NULL; //This shouldn't happen but it's here for
     removeFromFreeList(foundBlock); //Remove the block from the free list it is in and set the prev bits of the next block
     setHeader(foundBlock, foundBlock->header|THIS_BLOCK_ALLOCATED); //Set the block to the allocated
+    sf_block *nextBlock = getNextBlock(foundBlock); //Get the next block so we can allocate it's previous bit
+    setHeader(nextBlock, nextBlock->header|PREV_BLOCK_ALLOCATED); //Set the block to the allocated
     splitBlock(foundBlock, size); //Split the block we found to the proper size
     return foundBlock->body.payload; //Return a pointer to the payload of the free block
 } //Note that this function returns either NULL or a pointer to the payload
@@ -237,8 +239,8 @@ static sf_block *coalesceBlock(sf_block *pp){ //Coalesce the block with adjacent
 static sf_block *getPreviousBlock(sf_block *pp){ //Get the previous block, assumes that the block is free
     return subtractPointer(pp,((pp->prev_footer) & ~THIS_BLOCK_ALLOCATED & ~PREV_BLOCK_ALLOCATED)); //Get the previous block
 } //This is here to increase readability of the code
-static void removeFromFreeList(sf_block *pp){ //Remove a block from a free list
 
+static void removeFromFreeList(sf_block *pp){ //Remove a block from a free list
     pp->body.links.prev->body.links.next=pp->body.links.next; //The previous block should jump to the next
     pp->body.links.next->body.links.prev=pp->body.links.prev; //The next block should back to the previous
 } //Note that the payload of pp is essentially garbage with the previous pointers
