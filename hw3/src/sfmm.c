@@ -69,7 +69,7 @@ void *sf_realloc(void *pp, size_t rsize) {
         size_t payloadSize = getSizeOfBlock(pp)-sizeof(sf_header); //The paylod is the size minus the header(allocated=no footer)
         memcpy(newBlock->body.payload, ((sf_block *)pp)->body.payload, payloadSize); //Copy the payload to the new block
         sf_free(((sf_block *)pp)->body.payload); //Free the old block by sending the payload
-        return newBlock; //Return the newly allocated block
+        return newBlock->body.payload; //Return the newly allocated block
     } else{ //Technically we should have a case of equal size but it works since split to same size doesn't break
         splitBlock(pp,rsize); //The payload is the same but the way we read it is different
         return ((sf_block *)pp)->body.payload; //The payload is still the same just cut off if applicable
