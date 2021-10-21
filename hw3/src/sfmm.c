@@ -258,10 +258,10 @@ static void verifyPointer(void *pp){ //Abort the program if the pointer is inval
     sf_block *pointer = (sf_block *)pp; //Cast pp to a block and store it in a variable
     if(outsideHeap(pp)) //If the header is before the start of heap, or the footer is after the end of heap
         abort(); //The pointer is invalid, so we should abort the program
-    if(!pointer->header&THIS_BLOCK_ALLOCATED) //If the block is not allocated
+    if(!((pointer->header)&THIS_BLOCK_ALLOCATED)) //If the block is not allocated
         abort(); //The pointer is invalid, so we should abort the program
-    if(!(pointer->header&PREV_BLOCK_ALLOCATED)&& //If the current pointer says the last block is free but the prev block disagrees
-        getPreviousBlock(pointer)->header&THIS_BLOCK_ALLOCATED) //If the last block is allocated, we have no way to check
+    if((!((pointer->header)&PREV_BLOCK_ALLOCATED))&& //If the current pointer says the last block is free but the prev block disagrees
+        (getPreviousBlock(pointer)->header)&THIS_BLOCK_ALLOCATED) //If the last block is allocated, we have no way to check
         abort(); //The pointer is invalid, so we should abort the program
     return; //We successfully validated the pointer; This implementation was nicer on the eyes than nested if statements
 } //The pointer is valid

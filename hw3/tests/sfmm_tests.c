@@ -220,3 +220,12 @@ Test(sfmm_basecode_suite, realloc_smaller_block_free_block, .timeout = TEST_TIME
 	//
 //
 //}
+
+
+//tood
+//write criterion tests(examples in downloads folder)
+//test folder in downloads
+    //test unverified pointer
+        //test abort
+            //There is a ".signal = SIGABRT" parameter that can be passed to a Criterion test.  See the Criterion docs.
+    //test payload
