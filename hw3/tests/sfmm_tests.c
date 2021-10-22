@@ -191,62 +191,54 @@ Test(sfmm_basecode_suite, realloc_smaller_block_free_block, .timeout = TEST_TIME
 //Test(sfmm_student_suite, student_test_1, .timeout = TEST_TIMEOUT) {
 //}
 
+//I wrote 5 tests, 2 for sf_free and sf_realloc, and 1 for sf_malloc, since the other functions call upon sf_malloc
+//Testing sf_malloc
 Test(sfmm_student_suite, student_test_1, .timeout = TEST_TIMEOUT) {
-//
-	//
-	//test realloc to same size and request memory when freeing first would give enough
-	/*
-	char * ptr1 = sf_malloc(50 * sizeof(double));
-	*(ptr1) = 'A';
-	char * ptr2 = sf_malloc(78 * sizeof(double));
-	*(ptr2) = 'A';
-	char * ptr3 = sf_malloc(1 * sizeof(double));
-	*(ptr3) = 'A';
-	ptr1 = sf_realloc(ptr1, 300);
-	ptr2 = sf_realloc(ptr2, 640);
-	sf_free(ptr1);
-	ptr2 = sf_realloc(ptr2, 300);
-	sf_free(ptr2);
-	char * ptr4 = sf_malloc(7048);
-	*(ptr4) = 'A';
-	char * ptr5 = sf_malloc(6000);
-	*(ptr5) = 'A';
-	char * ptr6 = sf_malloc(2168);
-	*(ptr6) = 'A';
-	ptr6 = sf_realloc(ptr6, 2000);
-	ptr6 = sf_realloc(ptr6, 2000);
-	char * ptr7 = sf_malloc(1000);
-	*(ptr7) = 'A';
-	char * ptr8 = sf_realloc(ptr7, 1048);
-	*(ptr8) = 'A';
-	*/
-	//
-}
+	for(int i = 1; i < 50; i++){
+		void *x = sf_malloc(1); //Malloc a block
+		void *y = sf_malloc(1); //Malloc another block
+		if(i%2==0) x=sf_realloc(x,16*(50-i)); //Randomly scatter reallocs
+		if(i%2==1) y=sf_realloc(y,16*i);//Randomly scatter reallocs
+		if(i%3==2) sf_free(x); //Randomly scatter frees
+		if(i%3==1) sf_free(y); //Randomly scatter frees
+	}
+	assert_free_block_count(8512, 8, 1); //There should be one free block which should be here
+	cr_assert(sf_mem_start() + 3*PAGE_SZ == sf_mem_end(), "Allocated differently from expected!");
+} //Given that the malloc and fre works properly there should be a block larger than a page size at the end
 
-Test(sfmm_student_suite, student_test_2, .signal=SIGABRT, .timeout = TEST_TIMEOUT) {
+//Testing sf_realloc
+Test(sfmm_student_suite, student_test_2, .timeout = TEST_TIMEOUT) {
+	void *x = sf_malloc(1); //Malloc a block
+	sf_realloc(x,1); //Reallocate to the same size(64)
+	cr_assert_not_null(x, "x is NULL!"); //Make sure that x is allocated
+	sf_block *bp = (sf_block *)((char *)x - 16); //Get a pointer to the start of the block
+	cr_assert(*((long *)(bp) + 1) & 0x1, "Allocated bit is not set!"); //Check that x is allocated
+	cr_assert((*((long *)(bp) + 1) & ~0x3f) == 64, //Check that the block size is still 64 after reallocating
+		  "Realloc'ed block size (%ld) not what was expected (%ld)!", *((long *)(bp) + 1) & ~0x3f, 64);
+	cr_assert(((char *)sf_mem_start())+112 //The initial block should be the first in the heap(128-16 for header/prev_footer)
+		== (char *)bp, "Reallocating to the same size changed the block");
+	assert_free_block_count(8000, 8, 1); //There should be one free block which should be here
+} //We are reallocating to the same size, so we are testing if the result is the same as sf_malloc one block
+
+Test(sfmm_student_suite, student_test_3, .timeout = TEST_TIMEOUT) {
+	char * ptr1 = sf_malloc(1000); //Allocate a decently sized block
+	char * ptr2 = sf_malloc(7000); //Allocate the rest of the space(after the overhead, this will take the rest)
+	sf_free(ptr1); //Free the first block
+	ptr2 = sf_realloc(ptr2, 7500); //Try to take more space, but since our block is not free yet, we have to get more mem
+	assert_free_block_count(640, 5, 1); //There should be a free block from the leftover after the new page
+	assert_free_block_count(8064, 8, 1); //There should be a free block of large enough space for the realloc
+	cr_assert(sf_mem_start() + 2*PAGE_SZ == sf_mem_end(), "Allocated differently from expected!");
+} //Testing realloc implementation according to the doc
+
+//Testing sf_free; Testing the validity of the pointer
+Test(sfmm_student_suite, student_test_4, .signal=SIGABRT, .timeout = TEST_TIMEOUT) {
+	void *x = sf_malloc(1); //Initialize memory by malloc
+	sf_free(x); //Empty the block, but isn't 100% neede
+	sf_free(sf_mem_start()+64); //Try to free the prologue block(the "payload" starts here)
+} //Test invalid addresses; could also try freeing x++
+
+Test(sfmm_student_suite, student_test_5, .signal=SIGABRT, .timeout = TEST_TIMEOUT) {
 	void *x = sf_malloc(1); //Malloc a block
 	sf_free(x); //Free the block once
-	sf_free(x); //Free it again; should abort due to invalid pointer
-}
-
-//Test(sfmm_student_suite, student_test_3, .timeout = TEST_TIMEOUT) {
-//
-	//
-	//test values in payload
-//
-//}
-
-//Test(sfmm_student_suite, student_test_4, .timeout = TEST_TIMEOUT) {
-//
-	//
-	//test allocating whole memory
-//
-//}
-
-//Test(sfmm_student_suite, student_test_5, .timeout = TEST_TIMEOUT) {
-//
-	//
-	//test spamming free list with blocks(must have allocated in between tho)
-//
-//}
-
+	sf_free(x); //Free it again; should abort due to an allocated bit of 0
+} //Test freeing a block that isn't allocated

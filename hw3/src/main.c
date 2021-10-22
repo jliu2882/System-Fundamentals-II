@@ -6,18 +6,13 @@
 #include "debug.h"
 
 int main(int argc, char const *argv[]) {
+    double* ptr = sf_malloc(sizeof(double));
 
-    for(int i = 0; i < 100; i++){
-        char *x = sf_malloc(1);
-        char *y = sf_malloc(1);
-        if(i%3==0)
-            sf_free(x);
-        if(i%2==0)
-            sf_free(y);
-    }
+    *ptr = 320320320e-320;
 
+    printf("%f\n", *ptr);
 
-    sf_show_heap();
+    sf_free(ptr);
 
     return EXIT_SUCCESS;
 }
