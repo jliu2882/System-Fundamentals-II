@@ -64,12 +64,12 @@ void *sf_realloc(void *pp, size_t rsize) {
     pp=(char*)pp-16; //We want to go from the payload to the start of sf_block; cast to char* for portability
     rsize+=sizeof(sf_header); //The new block needs a header
     if(rsize>getSizeOfBlock(pp)){ //If we are reallocating to a larger block, we want to get a new space
-        sf_block *newBlock = sf_malloc(rsize); //Assign a new block with size rsize
-        if(newBlock==NULL) return NULL; //sf_errno will be set if sf_malloc deems it appropiate
+        sf_block *payload = sf_malloc(rsize); //Assign a new block with size rsize
+        if(payload==NULL) return NULL; //sf_errno will be set if sf_malloc deems it appropiate
         size_t payloadSize = getSizeOfBlock(pp)-sizeof(sf_header); //The paylod is the size minus the header(allocated=no footer)
-        memcpy(newBlock->body.payload, ((sf_block *)pp)->body.payload, payloadSize); //Copy the payload to the new block
+        memcpy(payload, ((sf_block *)pp)->body.payload, payloadSize); //Copy the payload to the new block
         sf_free(((sf_block *)pp)->body.payload); //Free the old block by sending the payload
-        return newBlock; //Return the newly allocated block
+        return payload; //Return the newly allocated block
     } else{ //Technically we should have a case of equal size but it works since split to same size doesn't break
         splitBlock(pp,rsize); //The payload is the same but the way we read it is different
         return ((sf_block *)pp)->body.payload; //The payload is still the same just cut off if applicable
