@@ -1,6 +1,6 @@
 say_hello: hello_world
   tmp/hello_world
-  rm -f tmp/*
+  rm -f tmp/hello_world tmp/main.o tmp/print.o
 
 hello_world: main.o print.o
   cc -o tmp/hello_world tmp/main.o tmp/print.o
