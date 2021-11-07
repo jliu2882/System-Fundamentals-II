@@ -311,8 +311,6 @@ static STEP *parse_step(FILE *in, int *errp) {
 	    sp->words = realloc(sp->words, max * sizeof(char *));
 	}
 	if(!strcmp(w, "|") || !strcmp(w, "<") || !strcmp(w, ">")) {
-	    debug("(push back '%s')", w);
-	    peek_token = w;
 	    break;
 	} else {
 	    sp->words[length++] = w;
@@ -432,6 +430,7 @@ static char *parse_token(FILE *in, int *errp) {
 	// the first character of the next token.
 	if(!bs && is_delim(c)) {
 	    if(length == 0) {
+		free(word);
 		char *delim = NULL;
 		if(c == '<')
 		    delim = strdup("<");

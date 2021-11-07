@@ -43,7 +43,7 @@ $(BIND)/$(EXEC): $(ALL_OBJF) lib/cookbook_parser.o
 	$(CC) $^ -o $@ $(LIBS)
 
 $(BIND)/$(TEST_EXEC): $(ALL_FUNCF) $(TEST_SRC) lib/cookbook_parser.o
-	$(CC) $(CFLAGS) $(INC) $(ALL_FUNCF) $(TEST_SRC) $(TEST_LIB) $(LIBS) -o $@
+	$(CC) $(CFLAGS) $(INC) $(ALL_FUNCF) $(TEST_SRC) lib/cookbook_parser.o $(TEST_LIB) $(LIBS) -o $@
 
 $(BLDD)/%.o: $(SRCD)/%.c
 	$(CC) $(CFLAGS) $(INC) -c -o $@ $<
