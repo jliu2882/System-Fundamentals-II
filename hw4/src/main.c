@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+
 #include <getopt.h> /* getopt */
+#include "cook.h" //cook.h is in src because I'm scared include might be replaced in grading
 
 #include "cookbook.h"
 
@@ -68,15 +70,41 @@ int main(int argc, char *argv[]) {
     } //Successfully parsed the cookbook
     if(mainRecipe==NULL) mainRecipe = cbp->recipes->name; //Use the first recipe if we didn't declare a main recipe
 
+test();
+
+//now what??
+//validate mainRecipe
+    //find main recipe by iterating through cbp until name matches mainRecipe
+        //caveat if next is end/0/null/idk then we go wee woo bad<<<
+    //if main was null, this should end in one iteration
+    //comparing names should be fine since assuming valid ckbk
+//anyways, now we have the pointer to recipe so start program
+
+//analyze main recipe
+//determine all subrecipes needed for main recipes
+    //determine all subrecipes needed for those subrecipes, etc...
+    //do this with a recursive traversal until we reach the leaves
+
+//process recipes
+//we will use a work queue
+    //contains the recipes that are required, are ready to be processed b/c dependencies are cleared and have not been processed yet
+    //will initially start as just leaves(don't need to include duplicates)
+//main procesing loop goes like
+    //if empty and nothing processed->cooking done and we gtfo exit with proper status
+    //if nonempty but processed=numCooks->wait with sigsuspend syscall until something finishes
+    //if nonempty and processed<numCooks->remove first from queue and calls fork to start cook process
+
+//process recipe(singular)
+//carries the task out in order
+    //idk man kinda spooky here >:(
 
 
-    printf("Cookbook file can be found here: %s\n", cookbook);
-    printf("Main Recipe: %s\n", mainRecipe);
-    printf("We are specifying that we need %lli cooks\n", maxCooks);
+printf("Cookbook file can be found here: %s\n", cookbook);
+printf("Main Recipe: %s\n", mainRecipe);
+printf("We are specifying that we need %lli cooks\n", maxCooks);
 
 
-
-//printf("First Name: %s\n", cbp->recipes->next->name);
+printf("First Name: %s\n", cbp->recipes->next->name);
 unparse_cookbook(cbp, stdout); //unparse the cookbook idk also prints to the screen
 
     exit(EXIT_SUCCESS); //Ran the program without error
