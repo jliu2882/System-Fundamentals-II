@@ -27,7 +27,7 @@ class Recipe():
 		self.in_progress = False
 	def __str__(self):
 		return self.name
-	
+
 	def __repr__(self):
 		return self.name
 
@@ -43,7 +43,7 @@ class Info():
 		self.pid = pid
 		self.delay = delay
 		self.words = words
-	
+
 	def __str__(self):
 		return '{:s} {:f} {:d} {:d} {:s}'.format(('START' if self.is_start else 'END'), self.start_time, self.pid, self.delay, self.words)
 
@@ -84,7 +84,7 @@ def parse_task(file, recipe):
 		if message != -1:
 			message = task_line[message + 3:].split(' ')[0]
 			task.message = message + '\n'
-		
+
 		task.steps.append(task_line.split('<')[0].split('>')[0].strip())
 	return task
 
@@ -95,7 +95,7 @@ def parse_recipe_header(file, recipe):
 	# Skip any prior whitespace
 	while line and line.strip() == '':
 		line = file.readline()
-	
+
 	line = line.strip()
 
 	# At this point there is name and dependencies
@@ -117,7 +117,7 @@ def parse_recipe(file):
 	recipe = Recipe()
 	if not parse_recipe_header(file, recipe):
 		return None
-	
+
 	task = parse_task(file, recipe)
 	while task:
 		recipe.tasks.append(task)
@@ -185,7 +185,7 @@ def get_student_transcript(argv, max_recipes):
 	return result.stderr.decode('utf8'), result.stdout.decode('utf8'), result.returncode
 
 def parse_args():
-	parser = argparse.ArgumentParser(description='Analyze cook book program provided', 
+	parser = argparse.ArgumentParser(description='Analyze cook book program provided',
 		usage='script.py [-p cook] [-f cookbook] [-c max_cooks] [-m main_recipe_name] [-e]')
 	parser.add_argument('-p', default='bin/cook', help='path of cook program to execute (default "bin/cook")')
 	parser.add_argument('-f', help='path of cookbook to process')
@@ -220,7 +220,7 @@ def get_stub_info(stub_line):
 
 	if stub_line[-1] == ']':
 		return Info(False, float(time), int(pid), int(delay))
-	
+
 	return Info(True, float(time), int(pid), int(delay), stub_line[right_bracket + 1:].strip())
 
 def remove_recipe(recipe, cookbook, ready_set, dependency_list):
@@ -249,12 +249,12 @@ def enqueue_steps(ready_set, cookbook, dependency_list):
 					cookbook.queue.append((step, task))
 		# No tasks for this recipe
 		else:
-			# Remove recipe from ready_set and add it's dependents 
+			# Remove recipe from ready_set and add it's dependents
 			remove_from_set.add(recipe)
 			if recipe.name == cookbook.main_recipe:
 				recipe.done = True
 			new_in_set.append(remove_recipe(recipe, cookbook, ready_set, dependency_list))
-	
+
 	# Adding new recipes
 	for new in new_in_set:
 		ready_set |= new
@@ -285,7 +285,7 @@ def remove_step(step, cookbook, ready_set, dependency_list):
 				f_in = open(task.in_file)
 				inputt += f_in.read()
 				f_in.close()
-			
+
 			if task.out_file:
 				f_out = open(task.out_file)
 				output = f_out.read()
@@ -298,7 +298,7 @@ def remove_step(step, cookbook, ready_set, dependency_list):
 				sys.exit(4)
 
 		update = True
-	
+
 	# remove step from queue
 	cookbook.queue.remove(step)
 	if update:
@@ -420,5 +420,5 @@ if __name__ == '__main__':
 	elif returncode != 0:
 		print("ERROR: student program did not return 0")
 		sys.exit(-1)
-		
+
 	sys.exit(analyze_transcript(cookbook, transcript, parsed.m, parsed.c))

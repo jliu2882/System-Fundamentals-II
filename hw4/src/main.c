@@ -9,16 +9,18 @@
 #include "cookbook.h"
 
 int main(int argc, char *argv[]) {
-    COOKBOOK *cbp; //Declare a pointer to a cookbook
+    extern COOKBOOK *cbp; //Declare a pointer to a cookbook
+    extern char *cookbook; //We use extern to not have to pass these values
+    extern unsigned long long maxCooks; //ok honestly if you overflow this, mb dude
+    cookbook = "rsrc/cookbook.ckb"; //Set the default value for cookbook
+    maxCooks = 1; //Default max cooks should be 1
     int err = 0; //Declare a variable for error codes
     FILE *in; //File to store cookbook input
-    char *cookbook = "rsrc/cookbook.ckb"; //Default cookbook
-    unsigned long long maxCooks = 1; //Default max cooks should be 1; ok honestly if you overflow this, mb dude
-    char *mainRecipe = NULL; //Default main recipe is the first recipe(we will store as null)
+    char *mainRecipe; //Store a string of the main recipe
     int specifiedFile = 0; //If we want to provide a cookbook, we shouldn't try to do more than one
     int specifiedCooks = 0; //If we want to provide a number of cook, we shouldn't try to do it more than once
     int specifiedRecipe = 0; //If we want to specify a recipe, we shouldn't do it more than once
-    char ch; //Here so we can determine if the number of cooks is an integer
+    char ch; //Here so we can determine if the number of cooks is an integer; it just works :)
     int opt; //Create an variable to parse the arguments
     while ((opt = getopt(argc, argv, "-:f:c:")) != -1) { //Keep reading the arguments until we run out
         switch (opt) { //Check the argument with a switch/case
@@ -69,17 +71,12 @@ int main(int argc, char *argv[]) {
     	exit(EXIT_FAILURE); //Exits the program with an error
     } //Successfully parsed the cookbook
     if(mainRecipe==NULL) mainRecipe = cbp->recipes->name; //Use the first recipe if we didn't declare a main recipe
+    if(validateRecipe(mainRecipe)) exit(EXIT_FAILURE); //If the recipe was invalid exit with failure
+
+
 
 test();
-
-//now what??
-//validate mainRecipe
-    //find main recipe by iterating through cbp until name matches mainRecipe
-        //caveat if next is end/0/null/idk then we go wee woo bad<<<
-    //if main was null, this should end in one iteration
-    //comparing names should be fine since assuming valid ckbk
-//anyways, now we have the pointer to recipe so start program
-
+exit(0);
 //analyze main recipe
 //determine all subrecipes needed for main recipes
     //determine all subrecipes needed for those subrecipes, etc...
@@ -99,12 +96,6 @@ test();
     //idk man kinda spooky here >:(
 
 
-printf("Cookbook file can be found here: %s\n", cookbook);
-printf("Main Recipe: %s\n", mainRecipe);
-printf("We are specifying that we need %lli cooks\n", maxCooks);
-
-
-printf("First Name: %s\n", cbp->recipes->next->name);
 unparse_cookbook(cbp, stdout); //unparse the cookbook idk also prints to the screen
 
     exit(EXIT_SUCCESS); //Ran the program without error
