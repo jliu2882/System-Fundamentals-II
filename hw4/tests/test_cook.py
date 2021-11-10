@@ -223,19 +223,19 @@ def get_stub_info(stub_line):
 	
 	return Info(True, float(time), int(pid), int(delay), stub_line[right_bracket + 1:].strip())
 
-def remove_recipe(recipe, cookbook, ready_set):
+def remove_recipe(recipe, cookbook, ready_set, dependency_list):
 	add_to_set = set()
 
 	recipe.in_progress = False
 	for r in recipe.depend_on_this:
 		r.this_depends_on.remove(recipe)
 		#print(r, len(r.this_depends_on), r.tasks[0].steps if len(r.tasks) > 0 else '')
-		if len(r.this_depends_on) == 0 and len(r.tasks) != 0:
+		if (r.name in dependency_list) and len(r.this_depends_on) == 0 and len(r.tasks) != 0:
 			add_to_set.add(r)
 
 	return add_to_set
 
-def enqueue_steps(ready_set, cookbook):
+def enqueue_steps(ready_set, cookbook, dependency_list):
 	new_in_set = []
 	remove_from_set = set()
 	tasks = [s[1] for s in cookbook.queue]
@@ -253,7 +253,7 @@ def enqueue_steps(ready_set, cookbook):
 			remove_from_set.add(recipe)
 			if recipe.name == cookbook.main_recipe:
 				recipe.done = True
-			new_in_set.append(remove_recipe(recipe, cookbook, ready_set))
+			new_in_set.append(remove_recipe(recipe, cookbook, ready_set, dependency_list))
 	
 	# Adding new recipes
 	for new in new_in_set:
@@ -267,7 +267,7 @@ def enqueue_steps(ready_set, cookbook):
 	# return whether a recipe has completed
 	return len(remove_from_set) != 0
 
-def remove_step(step, cookbook, ready_set):
+def remove_step(step, cookbook, ready_set, dependency_list):
 	# remove completed step
 	task = step[1]
 	task.steps.remove(step[0])
@@ -303,8 +303,15 @@ def remove_step(step, cookbook, ready_set):
 	cookbook.queue.remove(step)
 	if update:
 		# enqueue next task if recipe completed task
-		return enqueue_steps(ready_set, cookbook)
+		return enqueue_steps(ready_set, cookbook, dependency_list)
 	return False
+
+def get_dependency_list(recipe, dependency_list):
+	if not recipe.this_depends_on:
+		return
+	for r in recipe.this_depends_on:
+		dependency_list.add(r.name)
+		get_dependency_list(r, dependency_list)
 
 def analyze_transcript(cookbook, transcript, main_recipe, max_cooks):
 	if not main_recipe:
@@ -312,10 +319,14 @@ def analyze_transcript(cookbook, transcript, main_recipe, max_cooks):
 
 	cookbook.main_recipe = main_recipe
 	root = get_recipe(cookbook, main_recipe)
+	dependency_list = set()
+	dependency_list.add(main_recipe)
+	get_dependency_list(root, dependency_list)
+	print(dependency_list)
 	root.done = False
 	ready_set = set()
 	get_leaves(root, ready_set)
-	enqueue_steps(ready_set, cookbook)
+	enqueue_steps(ready_set, cookbook, dependency_list)
 
 	cooks = 0
 	pid_to_step = {}
@@ -363,7 +374,7 @@ def analyze_transcript(cookbook, transcript, main_recipe, max_cooks):
 			except:
 				return -2
 			#print(ready_set, step)
-			if remove_step(step, cookbook, ready_set):
+			if remove_step(step, cookbook, ready_set, dependency_list):
 				cooks -= 1
 			del pid_to_step[info.pid]
 	if root.done:
