@@ -9,14 +9,17 @@
 #include "cookbook.h"
 
 int main(int argc, char *argv[]) {
-    extern COOKBOOK *cbp; //Declare a pointer to a cookbook
+    extern COOKBOOK *cbp; //Declare a pointer to a cookbook; I guess putting is not needed, but for clarity in main
     extern char *cookbook; //We use extern to not have to pass these values
     extern unsigned long long maxCooks; //ok honestly if you overflow this, mb dude
+    extern RECIPE *recipe; //Just declaring all globals here(I didn't put them in cook.c since the code works)
+    extern NODE *workQueue; //This way, if cook.h isn't included, it's abundantly clear that these aren't syntax errors
     cookbook = "rsrc/cookbook.ckb"; //Set the default value for cookbook
-    maxCooks = 1; //Default max cooks should be 1
+    maxCooks = 1; //Default max cooks should be 1; cookbook, maxCooks and cbp are extern from cook.h
+    workQueue = NULL; //The queue should be empty by default
     int err = 0; //Declare a variable for error codes
     FILE *in; //File to store cookbook input
-    char *mainRecipe; //Store a string of the main recipe
+    char *mainRecipe; //Store a string of the main recipe so we can find it within the cookbook later
     int specifiedFile = 0; //If we want to provide a cookbook, we shouldn't try to do more than one
     int specifiedCooks = 0; //If we want to provide a number of cook, we shouldn't try to do it more than once
     int specifiedRecipe = 0; //If we want to specify a recipe, we shouldn't do it more than once
@@ -71,16 +74,39 @@ int main(int argc, char *argv[]) {
     	exit(EXIT_FAILURE); //Exits the program with an error
     } //Successfully parsed the cookbook
     if(mainRecipe==NULL) mainRecipe = cbp->recipes->name; //Use the first recipe if we didn't declare a main recipe
-    if(validateRecipe(mainRecipe)) exit(EXIT_FAILURE); //If the recipe was invalid exit with failure
+    if(invalidRecipe(mainRecipe)) exit(EXIT_FAILURE); //If the recipe was invalid exit with failure
+
+/*
+printf("%s\n",recipe->name);
+printf("%s\n",recipe->next->name);
+printf("%s\n",recipe->next->next->name);
+printf("%s\n",recipe->next->next->next->name);
+printf("%s\n",recipe->next->next->next->next->name);
+printf("%s\n",recipe->next->next->next->next->next->name);
+printf("%s\n",recipe->next->next->next->next->next->next->name);
+printf("%s\n",recipe->next->next->next->next->next->next->next->name);
+printf("%s\n",recipe->next->next->next->next->next->next->next->next->name);
+printf("%s\n",recipe->next->next->next->next->next->next->next->next->next->name);
+printf("%s\n",recipe->next->next->next->next->next->next->next->next->next->next->name);
+printf("%s\n",recipe->next->next->next->next->next->next->next->next->next->next->next->name);
+printf("%s\n",recipe->next->next->next->next->next->next->next->next->next->next->next->next->name);
+
+    if(addLeaves()){ //The function isn't descriptive, but this means that recipe is a leaf
+        //process recipe since it is a leaf now
+        printf("we are starting %s\n",recipe->name);
+    } //Didn't want to create a recipe_link from recipe
+*/
+    if(dfs(0,recipe)){ //The function isn't descriptive, but this means that recipe is a leaf
+        //process recipe since it is a leaf now
+        printf("we are starting %s\n",recipe->name);
+    } //Didn't want to create a recipe_link from recipe
 
 
 
-test();
+
+//test();
 exit(0);
-//analyze main recipe
-//determine all subrecipes needed for main recipes
-    //determine all subrecipes needed for those subrecipes, etc...
-    //do this with a recursive traversal until we reach the leaves
+    printf("Main Recipe: %s\n", recipe->name);
 
 //process recipes
 //we will use a work queue
