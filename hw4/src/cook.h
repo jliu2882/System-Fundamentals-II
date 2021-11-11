@@ -4,6 +4,9 @@ typedef struct node {
     struct recipe *recipe;
     struct node *next;
 } NODE;
+typedef struct state{
+    int complete;
+} STATE;
 
 COOKBOOK *cbp;
 char *cookbook;
@@ -12,13 +15,10 @@ unsigned long long maxCooks;
 NODE *workQueue;
 
 int invalidRecipe(char *mainRecipe);
-void addToQueue(RECIPE_LINK *leaf);
-NODE *popQueue();
-int checkQueue(char *leafName);
-int dfs(int level, RECIPE *bruh);
-void dfs_helper(int level, RECIPE_LINK *bruh);
-
-
-
-
-void test(); //hehecar
+void addToQueue(RECIPE *leaf);
+int isLeaf(RECIPE *node);
+int isCompleted(RECIPE *node);
+int existsInQueue(char *name);
+RECIPE *popAndProcessQueue();
+void processRecipe(RECIPE *node);
+int dfs(RECIPE *node, int level);

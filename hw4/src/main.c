@@ -8,7 +8,7 @@
 
 #include "cookbook.h"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) { //Some comments in cook.c are from previous iterations so may not make perfect sense
     extern COOKBOOK *cbp; //Declare a pointer to a cookbook; I guess putting is not needed, but for clarity in main
     extern char *cookbook; //We use extern to not have to pass these values
     extern unsigned long long maxCooks; //ok honestly if you overflow this, mb dude
@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
     workQueue = NULL; //The queue should be empty by default
     int err = 0; //Declare a variable for error codes
     FILE *in; //File to store cookbook input
-    char *mainRecipe; //Store a string of the main recipe so we can find it within the cookbook later
+    char *mainRecipe = NULL; //Store a string of the main recipe so we can find it within the cookbook later
     int specifiedFile = 0; //If we want to provide a cookbook, we shouldn't try to do more than one
     int specifiedCooks = 0; //If we want to provide a number of cook, we shouldn't try to do it more than once
     int specifiedRecipe = 0; //If we want to specify a recipe, we shouldn't do it more than once
@@ -74,39 +74,32 @@ int main(int argc, char *argv[]) {
     	exit(EXIT_FAILURE); //Exits the program with an error
     } //Successfully parsed the cookbook
     if(mainRecipe==NULL) mainRecipe = cbp->recipes->name; //Use the first recipe if we didn't declare a main recipe
-    if(invalidRecipe(mainRecipe)) exit(EXIT_FAILURE); //If the recipe was invalid exit with failure
-
-/*
-printf("%s\n",recipe->name);
-printf("%s\n",recipe->next->name);
-printf("%s\n",recipe->next->next->name);
-printf("%s\n",recipe->next->next->next->name);
-printf("%s\n",recipe->next->next->next->next->name);
-printf("%s\n",recipe->next->next->next->next->next->name);
-printf("%s\n",recipe->next->next->next->next->next->next->name);
-printf("%s\n",recipe->next->next->next->next->next->next->next->name);
-printf("%s\n",recipe->next->next->next->next->next->next->next->next->name);
-printf("%s\n",recipe->next->next->next->next->next->next->next->next->next->name);
-printf("%s\n",recipe->next->next->next->next->next->next->next->next->next->next->name);
-printf("%s\n",recipe->next->next->next->next->next->next->next->next->next->next->next->name);
-printf("%s\n",recipe->next->next->next->next->next->next->next->next->next->next->next->next->name);
-
-    if(addLeaves()){ //The function isn't descriptive, but this means that recipe is a leaf
-        //process recipe since it is a leaf now
-        printf("we are starting %s\n",recipe->name);
-    } //Didn't want to create a recipe_link from recipe
-*/
-    if(dfs(0,recipe)){ //The function isn't descriptive, but this means that recipe is a leaf
-        //process recipe since it is a leaf now
-        printf("we are starting %s\n",recipe->name);
-    } //Didn't want to create a recipe_link from recipe
+    if(invalidRecipe(mainRecipe)) exit(EXIT_FAILURE); //Define recipe unless we encounter an error where we exit
+    if(dfs(recipe,0)) processRecipe(recipe); //Akin to hard-coding, but dfs returns TRUE if there is only 1 recipe
 
 
+//state should store:
+//recipe completed or not
+printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+printf("workQueue: %s\n", workQueue->recipe->name);
+printf("workQueue: %s\n", workQueue->next->recipe->name);
+printf("workQueue: %s\n", workQueue->next->next->recipe->name);
+printf("workQueue: %s\n", workQueue->next->next->next->recipe->name);
+printf("workQueue: %s\n", workQueue->next->next->next->next->recipe->name);
 
-
-//test();
-exit(0);
-    printf("Main Recipe: %s\n", recipe->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
+printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
 
 //process recipes
 //we will use a work queue
@@ -122,7 +115,12 @@ exit(0);
     //idk man kinda spooky here >:(
 
 
-unparse_cookbook(cbp, stdout); //unparse the cookbook idk also prints to the screen
+//TODO ITERATE THROUGH CBP AND FREE ALL STATES IF THEY EXIST
+printf("\n\n~~~~~~~~~~~~~\nTODO ITERATE THROUGH CBP AND FREE ALL STATES IF THEY EXIST\n\n");
+printf("Cookbook file can be found here: %s\n", cookbook);
+printf("Main Recipe: %s\n", recipe->name);
+printf("We are specifying that we need %lli cooks\n", maxCooks);
+printf("First Name: %s\n", cbp->recipes->next->name);
 
     exit(EXIT_SUCCESS); //Ran the program without error
 }
