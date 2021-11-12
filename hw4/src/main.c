@@ -101,13 +101,6 @@ printf("busy, come again please"); //WAIT (using the sigsuspend() system call)
 
         } //hi :)
     } //hey :)
-
-
-
-
-printf("%i",!((STATE *)(recipe->state))->complete);
-//TODO maybe check complete = 1 so we can accept -1 results VS checking !compelte
-
     freeCBP(); //Free any states that are still allocated
     if(!isCompleted(recipe)) exit(EXIT_FAILURE); //Not sure if this is possible, but failure
     exit(EXIT_SUCCESS); //Ran the program without error
@@ -116,27 +109,6 @@ printf("%i",!((STATE *)(recipe->state))->complete);
 
 
 /*
-
-When cook start, it does tasks in order(tries in util/ first then just ./)
-    if two recipes are independent order don't matter muffin/bacon theory
-for each task, cook use fork() to run each step in concurrency
-    note that stdout of each process sent to stdin of next process
-    if input redirection->stdin of first child(input file must exist)
-    if output redirection->stdout of last child(output file should be set to empty file first[0length])
-we need to use these syscalls
-    making children
-        fork()
-    pipe/redirections
-        open()
-        pipe()
-        dup2()
-    run steps
-        execvp()
-forbidden goods
-    system() syscall
-    any form of shell to create pipeline
-    sleep()
-Tasks in cookbook are simplified syntax understood by bash so> cook setting up pipeline = shell given task as command
 
 Once pipeline set, cook use wait/waitpid to wait for pipeline processes and determine success(exit(0) AND no signal)
 on success, go to next task; on fail, exit(EXIT_FAILURE) || if all tasks in recipe done; exit(0)
@@ -151,11 +123,6 @@ sigaction() syscall to install handler for SIGCHLD
 processing loop and SIGCHLD handler are concurrent flow that access same data struct
     //main loop must BLOCK execution of handler during times it accesses data struct
         //use sigprocmask()
-
-
-NOTES:
-NO OUTPUTS/PRINTS UNLESS ERROR, where you can print oneliner that doesn't have START/END
-Steps in pipeline can go in any order(just care for steps relying on each others input/output)
 Main program should not exit until it has reaped all existing child processes.
 Mark recipes with failure(-1 in state->complete) so we can catch failures and exit program asap
 
