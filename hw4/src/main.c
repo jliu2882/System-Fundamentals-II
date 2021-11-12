@@ -3,6 +3,10 @@
 #include <string.h>
 #include <errno.h>
 
+
+#include <signal.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include <getopt.h> /* getopt */
 #include "cook.h" //cook.h is in src because I'm scared include might be replaced in grading
 
@@ -12,6 +16,7 @@ int main(int argc, char *argv[]) { //Some comments in cook.c are from previous i
     extern COOKBOOK *cbp; //Declare a pointer to a cookbook; I guess putting is not needed, but for clarity in main
     extern char *cookbook; //We use extern to not have to pass these values
     extern unsigned long long maxCooks; //ok honestly if you overflow this, mb dude
+    extern unsigned long long busyCooks; //ok honestly if you overflow this, mb dude
     extern RECIPE *recipe; //Just declaring all globals here(I didn't put them in cook.c since the code works)
     extern NODE *workQueue; //This way, if cook.h isn't included, it's abundantly clear that these aren't syntax errors
     cookbook = "rsrc/cookbook.ckb"; //Set the default value for cookbook
@@ -52,6 +57,8 @@ int main(int argc, char *argv[]) { //Some comments in cook.c are from previous i
             case ':': //Unknown Options
             default: //Catch any other arguments
             USAGE: //Prints the correct usage and exits the program
+                fprintf(stderr,"Arguments Incorrect\n"); //Commented out USAGE because it was more than one line
+                /*
                 fprintf(stderr, "USAGE: %s [-f cookbook] [-c max_cooks] [main_recipe_name]\n" \
                     "   -f cookbook\n" \
                     "         cookbook should be a valid cookbook we can reach from this directory\n\n" \
@@ -61,7 +68,8 @@ int main(int argc, char *argv[]) { //Some comments in cook.c are from previous i
                     "         main_recipe_name should be a valid recipe in our cookbook\n\n" \
                     "Note that while the arguments are optional, extraneous arguments will not be accepted\n"
                     , argv[0]); //Lets the user know how to run the program
-                    exit(EXIT_FAILURE); //Exits the program with an error
+                */
+                exit(EXIT_FAILURE); //Exits the program with an error
         } //Check the current option
     } //Finish parsing the arguments
     if((in = fopen(cookbook, "r")) == NULL) { //Can't open cookbook
@@ -75,52 +83,80 @@ int main(int argc, char *argv[]) { //Some comments in cook.c are from previous i
     } //Successfully parsed the cookbook
     if(mainRecipe==NULL) mainRecipe = cbp->recipes->name; //Use the first recipe if we didn't declare a main recipe
     if(invalidRecipe(mainRecipe)) exit(EXIT_FAILURE); //Define recipe unless we encounter an error where we exit
-    if(dfs(recipe,0)) processRecipe(recipe); //Akin to hard-coding, but dfs returns TRUE if there is only 1 recipe
+    dfs(recipe,0); //Perform a dfs and add the leaves
 
 
-//state should store:
-//recipe completed or not
-printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-printf("workQueue: %s\n", workQueue->recipe->name);
-printf("workQueue: %s\n", workQueue->next->recipe->name);
-printf("workQueue: %s\n", workQueue->next->next->recipe->name);
-printf("workQueue: %s\n", workQueue->next->next->next->recipe->name);
-printf("workQueue: %s\n", workQueue->next->next->next->next->recipe->name);
 
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-printf("POPPED OFF: %s\n",popAndProcessQueue()->name);
-
-//process recipes
-//we will use a work queue
-    //contains the recipes that are required, are ready to be processed b/c dependencies are cleared and have not been processed yet
-    //will initially start as just leaves(don't need to include duplicates)
-//main procesing loop goes like
-    //if empty and nothing processed->cooking done and we gtfo exit with proper status
-    //if nonempty but processed=numCooks->wait with sigsuspend syscall until something finishes
-    //if nonempty and processed<numCooks->remove first from queue and calls fork to start cook process
-
-//process recipe(singular)
-//carries the task out in order
-    //idk man kinda spooky here >:(
+    struct sigaction newAction; //Declare a new action for SIGCHLD signal
+    newAction.sa_handler=sigchld_handler; //Declare the handler for the signal
+    sigaction(SIGCHLD,&newAction,NULL); //Set the handler for SIGCHLD
 
 
-//TODO ITERATE THROUGH CBP AND FREE ALL STATES IF THEY EXIST
-printf("\n\n~~~~~~~~~~~~~\nTODO ITERATE THROUGH CBP AND FREE ALL STATES IF THEY EXIST\n\n");
-printf("Cookbook file can be found here: %s\n", cookbook);
-printf("Main Recipe: %s\n", recipe->name);
-printf("We are specifying that we need %lli cooks\n", maxCooks);
-printf("First Name: %s\n", cbp->recipes->next->name);
+    while(!isQueueEmpty() || busyCooks){ //We continue until the queue is empty AND all the cooks are done
+        if(busyCooks<maxCooks){ //If any cooks are free
+            popAndProcessQueue(); //does function name
+        } else{ //All cooks are busy; Note that we will NEVER try to use a cook when busyCooks=maxCooks
 
+printf("busy, come again please"); //WAIT (using the sigsuspend() system call)
+
+        } //hi :)
+    } //hey :)
+
+
+
+
+printf("%i",!((STATE *)(recipe->state))->complete);
+//TODO maybe check complete = 1 so we can accept -1 results VS checking !compelte
+
+    freeCBP(); //Free any states that are still allocated
+    if(!isCompleted(recipe)) exit(EXIT_FAILURE); //Not sure if this is possible, but failure
     exit(EXIT_SUCCESS); //Ran the program without error
 }
+
+
+
+/*
+
+When cook start, it does tasks in order(tries in util/ first then just ./)
+    if two recipes are independent order don't matter muffin/bacon theory
+for each task, cook use fork() to run each step in concurrency
+    note that stdout of each process sent to stdin of next process
+    if input redirection->stdin of first child(input file must exist)
+    if output redirection->stdout of last child(output file should be set to empty file first[0length])
+we need to use these syscalls
+    making children
+        fork()
+    pipe/redirections
+        open()
+        pipe()
+        dup2()
+    run steps
+        execvp()
+forbidden goods
+    system() syscall
+    any form of shell to create pipeline
+    sleep()
+Tasks in cookbook are simplified syntax understood by bash so> cook setting up pipeline = shell given task as command
+
+Once pipeline set, cook use wait/waitpid to wait for pipeline processes and determine success(exit(0) AND no signal)
+on success, go to next task; on fail, exit(EXIT_FAILURE) || if all tasks in recipe done; exit(0)
+
+main process wait for recipes 23/6; it must be waiting for signal when cook ends
+sigaction() syscall to install handler for SIGCHLD
+    handler invoked->examine exit status
+        0->mark recipe as completed
+       !0->mark recipe as failed
+    if success, do the dfs agane (tldr; what im doing in process but might need to move the codes)
+
+processing loop and SIGCHLD handler are concurrent flow that access same data struct
+    //main loop must BLOCK execution of handler during times it accesses data struct
+        //use sigprocmask()
+
+
+NOTES:
+NO OUTPUTS/PRINTS UNLESS ERROR, where you can print oneliner that doesn't have START/END
+Steps in pipeline can go in any order(just care for steps relying on each others input/output)
+Main program should not exit until it has reaped all existing child processes.
+Mark recipes with failure(-1 in state->complete) so we can catch failures and exit program asap
+
+*/
