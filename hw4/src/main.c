@@ -94,9 +94,10 @@ int main(int argc, char *argv[]) { //Some comments in cook.c are from previous i
 
     while(!isQueueEmpty() || busyCooks){ //We continue until the queue is empty AND all the cooks are done
         if(busyCooks<maxCooks){ //If any cooks are free
-            popAndProcessQueue(); //does function name
-        } else{ //All cooks are busy; Note that we will NEVER try to use a cook when busyCooks=maxCooks
 
+            popAndProcessQueue(); //does function name
+
+        } else{ //All cooks are busy; Note that we will NEVER try to use a cook when busyCooks=maxCooks
 printf("busy, come again please"); //WAIT (using the sigsuspend() system call)
 
         } //hi :)
