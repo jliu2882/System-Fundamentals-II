@@ -44,7 +44,7 @@ int isLeaf(RECIPE *node){ //Return true if node is a leaf
 int isCompleted(RECIPE *node){ //Return true if node is completed
 	STATE *state = (STATE *)(node->state); //Get the pointer to the state
 	if(state==NULL) return 0; //We necessarily initialize state when we complete a recipe
-	return state->complete==1; //This will be 1 if the recipe is complete; 0 if unstarted; -1 on errors
+	return (state->complete)==1; //This will be 1 if the recipe is complete; 0 if unstarted; -1 on errors
 } //Relatively simple function, but the abstraction helps with readability
 
 int existsInQueue(char *name){ //Checks to see if the name exists in the queue already
@@ -197,7 +197,7 @@ int runPipeline(TASK *task) { //Run the pipeline on a task
 			} //listen dik
 		} //its just a bndaid fix
 	} //heheyer y
-	wait(NULL); //wait for fork to finsih to continue
+	while ((wait(NULL)) > 0){} //wait for all to finish so cook doesn't do double duty
 	free(backup); //We no longer need the pointer to the task
 	free(util); //We no longer need the pointer to the task
 	return status; //Get the status

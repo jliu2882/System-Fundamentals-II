@@ -96,35 +96,14 @@ int main(int argc, char *argv[]) { //Some comments in cook.c are from previous i
         if(busyCooks<maxCooks){ //If any cooks are free
 
             popAndProcessQueue(); //does function name
+//TODO use sigsuspend inside popAndProcessQueue
 
         } else{ //All cooks are busy; Note that we will NEVER try to use a cook when busyCooks=maxCooks
 printf("busy, come again please"); //WAIT (using the sigsuspend() system call)
 
         } //hi :)
     } //hey :)
-    freeCBP(); //Free any states that are still allocated
     if(!isCompleted(recipe)) exit(EXIT_FAILURE); //Not sure if this is possible, but failure
+    freeCBP(); //Free any states that are still allocated
     exit(EXIT_SUCCESS); //Ran the program without error
 }
-
-
-
-/*
-
-Once pipeline set, cook use wait/waitpid to wait for pipeline processes and determine success(exit(0) AND no signal)
-on success, go to next task; on fail, exit(EXIT_FAILURE) || if all tasks in recipe done; exit(0)
-
-main process wait for recipes 23/6; it must be waiting for signal when cook ends
-sigaction() syscall to install handler for SIGCHLD
-    handler invoked->examine exit status
-        0->mark recipe as completed
-       !0->mark recipe as failed
-    if success, do the dfs agane (tldr; what im doing in process but might need to move the codes)
-
-processing loop and SIGCHLD handler are concurrent flow that access same data struct
-    //main loop must BLOCK execution of handler during times it accesses data struct
-        //use sigprocmask()
-Main program should not exit until it has reaped all existing child processes.
-Mark recipes with failure(-1 in state->complete) so we can catch failures and exit program asap
-
-*/
