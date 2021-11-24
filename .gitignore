@@ -1,6 +1,7 @@
 bin/
 build/
-test_output/
+*.o
+*.d
 *~
 *.out
 *.bak
