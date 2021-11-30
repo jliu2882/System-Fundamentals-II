@@ -45,7 +45,7 @@
  *            (contains object, direction, distance)
  *   ALERT:   Alert the user to an event that has occurred
  *   SCORE:   Update the scoreboard
- *            (contains user, avatar, score)
+ *            (contains avatar, score)
  *   CHAT:    Chat message from another user
  */
 
